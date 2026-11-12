@@ -320,16 +320,6 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 
 <script>
 const LAYER = 0.2;
-const MATS = [
-  {id:'PLA',  mul:1,    S:3, H:1, F:1, temp:55},
-  {id:'PETG', mul:1.10, S:4, H:2, F:2, temp:75},
-  {id:'ABS',  mul:1.15, S:4, H:3, F:2, temp:95},
-  {id:'ASA',  mul:1.20, S:4, H:3, F:2, temp:95}
-];
-const COLORS = [
-  {id:'graphite',hex:'#2d2f36'},{id:'white',hex:'#eeeeea'},{id:'orange',hex:'#ff6a1a'},{id:'blue',hex:'#2f6bff'},
-  {id:'green',hex:'#2fbf71'},{id:'red',hex:'#e5384b'},{id:'grey',hex:'#8a8f99'}
-];
 const STATUSES = ['new','confirmed','printing','ready','done','cancelled'];
 const FLOW = ['new','confirmed','printing','ready','done'];
 
@@ -353,6 +343,18 @@ const SEED_PRODUCTS = [
  ['gear','parts',1250,tr3('Fogaskerék','Gear','Шестерня'),tr3('Egyenes fogazású fogaskerék, 16 fog, 8 mm-es furat.','Spur gear, 16 teeth, 8 mm bore.','Прямозубая шестерня, 16 зубьев, отверстие 8 мм.')],
  ['spool','parts',990,tr3('Orsóadapter','Spool adapter','Адаптер катушки'),tr3('Filament-orsó adapter, 20 mm-es belső furat.','Filament spool adapter, 20 mm inner bore.','Адаптер для катушки филамента, внутреннее отверстие 20 мм.')]
 ].map(a => ({id:a[0], shape:a[0], cat:a[1], price:a[2], name:a[3], desc:a[4], active:true, photo:''}));
+const SEED_MATS = [
+  {id:'PLA',  pct:0,  S:3, H:1, F:1, temp:55, use:tr3('Dekor, játék, minden, ami nem melegszik.','Decor, toys, anything that stays cool.','Декор, игрушки, всё, что не греется.')},
+  {id:'PETG', pct:10, S:4, H:2, F:2, temp:75, use:tr3('Tartók, mechanikus alkatrész, konyhai és kültéri használat.','Holders, mechanical parts, kitchen and outdoor use.','Держатели, механические детали, кухня и улица.')},
+  {id:'ABS',  pct:15, S:4, H:3, F:2, temp:95, use:tr3('Hőt álló, strapabíró tárgyak.','Heat-tolerant, durable objects.','Термостойкие прочные изделия.')},
+  {id:'ASA',  pct:20, S:4, H:3, F:2, temp:95, use:tr3('Kültér, UV-álló, napfénynek kitett részek.','Outdoor, UV-stable, parts exposed to sun.','Улица, стойкость к UV, детали под солнцем.')}
+];
+const SEED_COLORS = [
+  {id:'graphite',hex:'#2d2f36',name:tr3('Grafit','Graphite','Графит')},{id:'white',hex:'#eeeeea',name:tr3('Fehér','White','Белый')},
+  {id:'orange',hex:'#ff6a1a',name:tr3('Narancs','Orange','Оранжевый')},{id:'blue',hex:'#2f6bff',name:tr3('Kék','Blue','Синий')},
+  {id:'green',hex:'#2fbf71',name:tr3('Zöld','Green','Зелёный')},{id:'red',hex:'#e5384b',name:tr3('Piros','Red','Красный')},
+  {id:'grey',hex:'#8a8f99',name:tr3('Szürke','Grey','Серый')}
+];
 const SEED_DELIVERY = [
   {id:'tab',    type:'pickup', enabled:true, fee:0,    name:tr3('Személyes átvétel: Tab','Pick-up: Tab','Самовывоз: Таб')},
   {id:'siofok', type:'pickup', enabled:true, fee:0,    name:tr3('Személyes átvétel: Siófok','Pick-up: Siófok','Самовывоз: Шиофок')},
@@ -390,6 +392,8 @@ async function hash(s){
   catch(e){ return 'b64:' + btoa(unescape(encodeURIComponent('pl:' + s))); }
 }
 async function seed(){
+  if(!DB.get('mats', null)) DB.set('mats', SEED_MATS);
+  if(!DB.get('colors', null)) DB.set('colors', SEED_COLORS);
   if(DB.get('seeded', false)) return;
   DB.set('cats', SEED_CATS); DB.set('products', SEED_PRODUCTS); DB.set('delivery', SEED_DELIVERY); DB.set('coupons', SEED_COUPONS);
   DB.set('settings', SEED_SETTINGS); DB.set('users', []); DB.set('orders', []); DB.set('cart', []);
@@ -503,7 +507,7 @@ ru:{
 /* ---------- i18n (admin) ---------- */
 const AT = {
 ru:{
- login_t:'Вход для администратора',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Демо-доступ по умолчанию: admin / admin. Защита условная, данные лежат в браузере.',
+ login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Демо-доступ по умолчанию: admin / admin. Защита условная, данные лежат в браузере.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
  t_dash:'Обзор',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
@@ -518,7 +522,7 @@ ru:{
  st_reset:'Сбросить демо-данные',st_reset_note:'Удалит все заказы, клиентов, купоны и изменения в каталоге и вернёт начальные данные.',st_lang:'Язык админки'
 },
 hu:{
- login_t:'Adminisztrátori belépés',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Alapértelmezett demó hozzáférés: admin / admin. A védelem csak jelképes, az adatok a böngészőben vannak.',
+ login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Alapértelmezett demó hozzáférés: admin / admin. A védelem csak jelképes, az adatok a böngészőben vannak.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
  t_dash:'Áttekintés',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
@@ -542,9 +546,14 @@ const fmt = n => Math.round(n).toLocaleString('hu-HU') + ' Ft';
 let lang = lsGet('pl_lang'); if(!T[lang]) lang = 'hu';
 const t = k => (T[lang][k] !== undefined ? T[lang][k] : T.hu[k]);
 const L = (o, l) => o ? (o[l || lang] || o.hu || o.en || o.ru || '') : '';
-const matById = id => MATS.find(m => m.id === id) || MATS[0];
-const colHex = id => (COLORS.find(c => c.id === id) || COLORS[2]).hex;
-const unitPrice = (p, mat) => Math.round(p.price * matById(mat).mul);
+const mats = () => DB.get('mats', SEED_MATS);
+const colors = () => DB.get('colors', SEED_COLORS);
+const matById = id => { const l = mats(); return l.find(m => m.id === id) || l[0] || {id, pct:0, S:1, H:1, F:1, temp:0, use:{}}; };
+const colHex = id => { const l = colors(); return (l.find(c => c.id === id) || l[0] || {hex:'#888888'}).hex; };
+const colName = id => { const c = colors().find(x => x.id === id); return c ? L(c.name) : id; };
+const pMats = p => { const all = mats(), l = all.filter(m => (p.mats || []).includes(m.id)); return l.length ? l : all; };
+const pColors = p => { const all = colors(), l = all.filter(c => (p.colors || []).includes(c.id)); return l.length ? l : all; };
+const unitPrice = (p, mat) => Math.round(p.price * (1 + (matById(mat).pct || 0) / 100));
 const dateStr = ts => new Date(ts).toLocaleString('hu-HU', {dateStyle:'short', timeStyle:'short'});
 const FLAG = {hu:'🇭🇺', ua:'🇺🇦'}, PRE = {hu:'+36', ua:'+380'};
 function mapPhone(v){
@@ -737,7 +746,7 @@ function thumbRenderer(){
 }
 const THUMBS = {};
 function thumbOf(shape, color){
-  const key = shape + '|' + color;
+  const key = shape + '|' + colHex(color);
   if(THUMBS[key] !== undefined) return THUMBS[key];
   const r = thumbRenderer(); if(!r || !BUILD[shape]) return THUMBS[key] = '';
   const hex = colHex(color), mat = mkMat(hex); mat.uniforms.uAccent.value = hexVec(hex);
@@ -764,7 +773,12 @@ const msg = (id, text, good) => { const el = $('#' + id); if(el){ el.textContent
 
 /* ---------- catalog ---------- */
 const PS = {};
-const ps = id => PS[id] || (PS[id] = {mat:'PLA', color:'orange'});
+const ps = id => {
+  const p = prod(id) || {}, m = pMats(p), c = pColors(p), s = PS[id] || (PS[id] = {});
+  if(!m.some(x => x.id === s.mat)) s.mat = m[0].id;
+  if(!c.some(x => x.id === s.color)) s.color = c[0].id;
+  return s;
+};
 let catFilter = 'all', query = '';
 function renderChips(){
   if(catFilter !== 'all' && !cats().some(c => c.id === catFilter)) catFilter = 'all';
@@ -781,7 +795,7 @@ function renderCatalog(){
       <div class="bd">
         <div><div class="tagline">${esc(cmap[p.cat] ? L(cmap[p.cat].name) : '')}</div><h3>${esc(L(p.name))}</h3></div>
         <div class="meta"><span class="small mono">${dimText(p.shape)}</span><span class="pr">${fmt(unitPrice(p, s.mat))}</span></div>
-        <div class="dots">${COLORS.map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(t('col')[c.id])}" title="${esc(t('col')[c.id])}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
+        <div class="dots">${pColors(p).map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(colName(c.id))}" title="${esc(colName(c.id))}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
         <div class="btns"><button class="btn sm" data-act="open-prod" data-id="${esc(p.id)}">${esc(t('c_details'))}</button><button class="btn primary sm" data-act="card-add" data-id="${esc(p.id)}">${esc(t('c_add'))}</button></div>
       </div></article>`;
   }).join('');
@@ -795,7 +809,7 @@ function paintThumb(p){
 function renderMaterials(){
   const bar = n => `<span class="bar" aria-label="${n}/5">${[1,2,3,4,5].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
   $('#matTable').innerHTML = `<thead><tr><th>${t('m_name')}</th><th>${t('m_strength')}</th><th>${t('m_heat')}</th><th>${t('m_flex')}</th><th>${t('m_use')}</th><th>${t('m_extra')}</th></tr></thead><tbody>` +
-    MATS.map(m => `<tr><td class="nm">${m.id}</td><td>${bar(m.S)}</td><td>${bar(m.H)} <span class="small mono">~${m.temp}°C</span></td><td>${bar(m.F)}</td><td>${esc(t('mat_use')[m.id])}</td><td class="mono">${m.mul === 1 ? '–' : '+' + Math.round((m.mul - 1) * 100) + '%'}</td></tr>`).join('') + '</tbody>';
+    mats().map(m => `<tr><td class="nm">${m.id}</td><td>${bar(m.S)}</td><td>${bar(m.H)} <span class="small mono">~${m.temp}°C</span></td><td>${bar(m.F)}</td><td>${esc(L(m.use))}</td><td class="mono">${m.pct ? '+' + m.pct + '%' : '–'}</td></tr>`).join('') + '</tbody>';
 }
 function renderStatic(){
   const s = settings();
@@ -817,7 +831,11 @@ function syncHero(){
   const p = heroProduct();
   if(HV && HV.ok && p) HV.setProduct(p.shape, '#ff6a1a');
 }
-function refreshShop(){ renderChips(); renderCatalog(); renderStatic(); syncHero(); cart = cart.filter(l => prod(l.pid)); saveCart(); }
+function refreshShop(){
+  cart = cart.filter(l => prod(l.pid)); const m0 = mats()[0], c0 = colors()[0];
+  cart.forEach(l => { if(!mats().some(m => m.id === l.mat)) l.mat = m0.id; if(!colors().some(c => c.id === l.color)) l.color = c0.id; });
+  renderChips(); renderCatalog(); renderMaterials(); renderStatic(); syncHero(); saveCart();
+}
 
 /* ---------- product modal ---------- */
 let M = null, MV = null;
@@ -838,8 +856,8 @@ function renderModalInfo(){
   $('#pCat').textContent = cat ? L(cat.name) : '';
   $('#mInfo').innerHTML = `
     <div><h2 id="pName">${esc(L(p.name))}</h2><p class="desc" style="margin-top:8px">${esc(L(p.desc))}</p></div>
-    <div><div class="lbl">${t('md_material')}</div><div class="chips">${MATS.map(m => `<button class="opt" data-act="m-mat" data-mat="${m.id}" aria-pressed="${M.mat === m.id}">${m.id}</button>`).join('')}</div></div>
-    <div><div class="lbl"><span>${t('md_color')}</span><span>${esc(t('col')[M.color])}</span></div><div class="dots">${COLORS.map(c => `<button class="dot" data-act="m-color" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(t('col')[c.id])}" aria-pressed="${M.color === c.id}"></button>`).join('')}</div></div>
+    <div><div class="lbl">${t('md_material')}</div><div class="chips">${pMats(p).map(m => `<button class="opt" data-act="m-mat" data-mat="${m.id}" aria-pressed="${M.mat === m.id}">${m.id}</button>`).join('')}</div></div>
+    <div><div class="lbl"><span>${t('md_color')}</span><span>${esc(colName(M.color))}</span></div><div class="dots">${pColors(p).map(c => `<button class="dot" data-act="m-color" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(colName(c.id))}" aria-pressed="${M.color === c.id}"></button>`).join('')}</div></div>
     <div class="row2"><div><div class="lbl">${t('md_qty')}</div><div class="num"><button data-act="m-qty" data-d="-1" aria-label="-">−</button><input id="mQty" data-on="mqty" value="${M.qty}" inputmode="numeric" aria-label="${t('md_qty')}"><button data-act="m-qty" data-d="1" aria-label="+">+</button></div></div></div>
     <div class="kv"><div><span>${t('md_size')}</span><span class="mono">${dimText(p.shape)}</span></div><div><span>${t('md_layer')}</span><span class="mono">${String(LAYER).replace('.', ',')} mm</span></div><div><span>${t('md_lead')}</span><span class="mono">${st.leadMin}–${st.leadMax} ${t('days')}</span></div></div>
     <div><div class="total"><span class="small">${t('md_total')}${M.qty > 1 ? ' · ' + fmt(unit) + ' × ' + M.qty : ''}</span><b>${fmt(unit * M.qty)}</b></div><button class="btn primary" data-act="m-add" style="width:100%">${t('c_add')}</button></div>`;
@@ -884,7 +902,7 @@ function renderCart(step){
   const wallet = c.user ? (c.user.coupons || []) : [];
   body.innerHTML = c.items.map((l, i) => `<div class="line">
       <div class="t">${esc(L(l.name))}</div><div class="p">${fmt(l.unit * l.qty)}</div>
-      <div class="s">${esc([l.mat, t('col')[l.color], dimText(l.shape)].join(' · '))}</div>
+      <div class="s">${esc([l.mat, colName(l.color), dimText(l.shape)].join(' · '))}</div>
       <div class="a"><div class="num" style="width:110px"><button data-act="c-qty" data-i="${i}" data-d="-1" aria-label="-">−</button><input value="${l.qty}" readonly aria-label="qty"><button data-act="c-qty" data-i="${i}" data-d="1" aria-label="+">+</button></div><button class="link" data-act="c-rm" data-i="${i}">${t('ct_remove')}</button></div>
     </div>`).join('') +
     `<div class="lbl" style="margin-top:14px"><span>${t('ct_delivery')}</span></div>
@@ -934,7 +952,7 @@ function submitOrder(){
   const all = orders(); all.push(o); DB.set('orders', all);
   if(c.cp){ const cl = coupons(); const x = cl.find(k => k.code === c.cp.code); if(x){ x.used = (x.used || 0) + 1; DB.set('coupons', cl); } }
   if(user){ const ul = users(), x = ul.find(k => k.id === user.id); if(x){ x.addr = {delivery:c.d.id, text:addr || (x.addr && x.addr.text) || ''}; DB.set('users', ul); } }
-  const text = [ref, dateStr(now), '', ...o.items.map(l => `• ${L(l.name)} (${l.mat}, ${t('col')[l.color]}) × ${l.qty} — ${fmt(l.unit * l.qty)}`), '',
+  const text = [ref, dateStr(now), '', ...o.items.map(l => `• ${L(l.name)} (${l.mat}, ${colName(l.color)}) × ${l.qty} — ${fmt(l.unit * l.qty)}`), '',
     `${t('ct_delivery')}: ${L(c.d.name)} (${fmt(c.fee)})`, ...(c.cp ? [`${t('co_disc')}: ${c.cp.code} −${fmt(c.discount)}`] : []), `${t('ct_total')}: ${fmt(c.total)}`, '',
     `${name} · ${ph.text}`, ...[mail, o.tg, addr, o.note].filter(Boolean)].join('\n');
   lastOrder = {ref, text, user:!!user}; cart = []; cpCode = ''; cpMsg = null; saveCart(); renderCart('done');
@@ -1050,7 +1068,7 @@ function ordRow(o){
 const ordHead = () => `<tr><th>${a('ref')}</th><th>${a('date')}</th><th>${a('cust')}</th><th>${a('phone')}</th><th class="r">${a('sum')}</th><th>${a('status')}</th><th></th></tr>`;
 function renderAdmin(){
   const box = $('#viewAdmin'); if(!adminOn){ box.innerHTML = ''; return; }
-  const tabs = [['dash','t_dash'],['orders','t_orders'],['products','t_products'],['cats','t_cats'],['users','t_users'],['coupons','t_coupons'],['settings','t_settings']];
+  const tabs = [['dash','t_dash'],['orders','t_orders'],['products','t_products'],['cats','t_cats'],['mats','t_mats'],['users','t_users'],['coupons','t_coupons'],['settings','t_settings']];
   const ords = admOrders(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
   let body = '';
   if(adm.tab === 'dash'){
@@ -1080,6 +1098,18 @@ function renderAdmin(){
       ${cats().map(c => `<tr><td>${esc(c.name.hu)}</td><td>${esc(c.name.en)}</td><td>${esc(c.name.ru)}</td><td class="r mono">${products().filter(p => p.cat === c.id).length}</td>
         <td><div class="rowbtns"><button class="btn sm" data-act="c-edit" data-id="${esc(c.id)}">${a('edit')}</button><button class="btn sm danger" data-act="c-del" data-id="${esc(c.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
       </tbody></table></div><p id="catMsg" class="err" style="margin-top:8px"></p>`;
+  } else if(adm.tab === 'mats'){
+    body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="mt-edit" data-id="">${a('add')} · ${a('mt_mat')}</button></div>
+      <div class="tablewrap"><table style="min-width:560px"><thead><tr><th>${a('mt_name')}</th><th class="r">${a('mt_pct')}</th><th>${a('mt_S')}</th><th>${a('mt_H')}</th><th>${a('mt_F')}</th><th>${a('mt_temp')}</th><th></th></tr></thead><tbody>
+      ${mats().map(m => `<tr><td class="nm">${esc(m.id)}</td><td class="r mono">${m.pct ? '+' + m.pct + '%' : '–'}</td><td class="mono">${m.S}</td><td class="mono">${m.H}</td><td class="mono">${m.F}</td><td class="mono">${m.temp}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="mt-edit" data-id="${esc(m.id)}">${a('edit')}</button><button class="btn sm danger" data-act="mt-del" data-id="${esc(m.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
+      </tbody></table></div><p id="mtMsg" class="err" style="margin-top:8px"></p>
+      <h2 class="sub">${a('mt_color')}</h2>
+      <div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="cl-edit" data-id="">${a('add')} · ${a('mt_color')}</button></div>
+      <div class="tablewrap"><table style="min-width:520px"><thead><tr><th></th><th>HU</th><th>EN</th><th>RU</th><th></th></tr></thead><tbody>
+      ${colors().map(c => `<tr><td><span class="thumb" style="width:32px;height:24px;background:${esc(c.hex)};border:1px solid var(--line)"></span></td><td>${esc(c.name.hu)}</td><td>${esc(c.name.en)}</td><td>${esc(c.name.ru)}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="cl-edit" data-id="${esc(c.id)}">${a('edit')}</button><button class="btn sm danger" data-act="cl-del" data-id="${esc(c.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
+      </tbody></table></div><p id="clMsg" class="err" style="margin-top:8px"></p>`;
   } else if(adm.tab === 'users'){
     body = users().length ? `<div class="tablewrap"><table><thead><tr><th>${a('u_name')}</th><th>${a('u_email')}</th><th>${a('phone')}</th><th class="r">${a('u_orders')}</th><th>${a('u_reg')}</th><th></th></tr></thead><tbody>
       ${users().map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${phoneHtml(u.phone)}</td><td class="r mono">${orders().filter(o => o.userId === u.id).length}</td><td class="small">${dateStr(u.created)}</td>
@@ -1127,7 +1157,7 @@ function ordDialog(ref){
       <div><span>${a('o_deliv')}</span><span>${esc(L(o.delivery.name, alang))}${o.addr ? ' · ' + esc(o.addr) : ''}</span></div>
       ${o.note ? `<div><span>${a('o_note')}</span><span>${esc(o.note)}</span></div>` : ''}</div>
     <div class="lbl">${a('o_items')}</div>
-    <div class="kv" style="margin-bottom:12px">${o.items.map(l => `<div><span>${esc(L(l.name, alang))} × ${l.qty}</span><span class="mono">${esc(l.mat)} · ${esc(T.hu.col[l.color] || l.color)} · ${fmt(l.unit * l.qty)}</span></div>`).join('')}
+    <div class="kv" style="margin-bottom:12px">${o.items.map(l => `<div><span>${esc(L(l.name, alang))} × ${l.qty}</span><span class="mono">${esc(l.mat)} · ${esc(colName(l.color))} · ${fmt(l.unit * l.qty)}</span></div>`).join('')}
       <div><span>${a('o_sub')}</span><span class="mono">${fmt(o.subtotal)}</span></div>
       ${o.coupon ? `<div><span>${a('o_coupon')} ${esc(o.coupon.code)}</span><span class="mono">−${fmt(o.coupon.discount)}</span></div>` : ''}
       <div><span>${a('o_fee')}</span><span class="mono">${fmt(o.delivery.fee)}</span></div>
@@ -1152,6 +1182,8 @@ function productDialog(id){
     ${['hu','en','ru'].map(l => `<label class="f">${a('p_desc')} ${l.toUpperCase()}<textarea class="inp" id="pfd_${l}" rows="2">${esc(p ? p.desc[l] : '')}</textarea></label>`).join('')}
     <div class="row2"><label class="f">${a('p_cat')}<select class="inp" id="pfCat">${cats().map(c => `<option value="${esc(c.id)}" ${p && p.cat === c.id ? 'selected' : ''}>${esc(L(c.name, alang))}</option>`).join('')}</select></label>
     <label class="f">${a('p_price')}<input class="inp" id="pfPrice" type="number" min="1" value="${p ? p.price : ''}"></label></div>
+    <div><div class="lbl">${a('p_mats')}</div><div class="chips">${mats().map(m => `<label class="ck"><input type="checkbox" class="pm" value="${esc(m.id)}" ${!p || !(p.mats || []).length || p.mats.includes(m.id) ? 'checked' : ''}> ${esc(m.id)}</label>`).join('')}</div></div>
+    <div><div class="lbl">${a('p_colors')}</div><div class="chips">${colors().map(c => `<label class="ck"><input type="checkbox" class="pc" value="${esc(c.id)}" ${!p || !(p.colors || []).length || p.colors.includes(c.id) ? 'checked' : ''}> <span class="thumb" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${esc(c.hex)};border:1px solid var(--line)"></span>${esc(L(c.name, alang))}</label>`).join('')}</div></div>
     <label class="ck"><input type="checkbox" id="pfActive" ${!p || p.active ? 'checked' : ''}> ${a('p_active')}</label>
     <label class="f">${a('p_photo')}<input class="inp" id="pfPhoto" type="file" accept="image/*" data-on="photo"></label>
     <div id="pfPrev">${p && p.photo ? `<img class="thumb" style="width:96px;height:72px" src="${p.photo}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>` : ''}</div>
@@ -1167,6 +1199,23 @@ function readPhoto(file){
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.82)); }; img.onerror = () => res(''); img.src = fr.result; };
     fr.onerror = () => res(''); fr.readAsDataURL(file);
   });
+}
+function matDialog(id){
+  const m = id ? mats().find(x => x.id === id) : null;
+  const num = (k, v) => `<label class="f">${a(k)}<input class="inp" id="${k}" type="number" min="0" value="${v}"></label>`;
+  openDlg(m ? a('edit') : a('mt_new'), `<form class="form" id="mtForm" data-id="${esc(id || '')}" novalidate>
+    <label class="f">${a('mt_name')}<input class="inp" id="mtId" value="${esc(m ? m.id : '')}" ${m ? 'readonly' : ''} maxlength="20"></label>
+    <div class="row2">${num('mt_pct', m ? m.pct : 0)}${num('mt_temp', m ? m.temp : 60)}</div>
+    <div class="row2">${num('mt_S', m ? m.S : 3)}${num('mt_H', m ? m.H : 2)}</div>${num('mt_F', m ? m.F : 1)}
+    ${['hu','en','ru'].map(l => `<label class="f">${a('mt_use')} ${l.toUpperCase()}<input class="inp" id="mu_${l}" value="${esc(m && m.use ? m.use[l] || '' : '')}"></label>`).join('')}
+    <p id="mtErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
+}
+function colorDialog(id){
+  const c = id ? colors().find(x => x.id === id) : null;
+  openDlg(c ? a('edit') : a('cl_new'), `<form class="form" id="clForm" data-id="${esc(id || '')}" novalidate>
+    ${['hu','en','ru'].map(l => `<label class="f">${a('cl_name')} ${l.toUpperCase()}<input class="inp" id="cn2_${l}" value="${esc(c ? c.name[l] : '')}"></label>`).join('')}
+    <label class="f">${a('cl_hex')}<input class="inp" id="clHex" type="color" value="${esc(c ? c.hex : '#e08a50')}" style="height:46px;padding:4px"></label>
+    <p id="clErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
 }
 function catDialog(id){
   const c = id ? cats().find(x => x.id === id) : null;
@@ -1248,6 +1297,20 @@ const ACT = {
   'p-edit':el => productDialog(el.dataset.id),
   'p-del':el => { DB.set('products', products().filter(p => p.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
   'p-photo-rm':() => { dlgPhoto = ''; $('#pfPrev').innerHTML = ''; },
+  'mt-edit':el => matDialog(el.dataset.id),
+  'cl-edit':el => colorDialog(el.dataset.id),
+  'mt-del':el => {
+    const list = mats(); if(list.length <= 1) return msg('mtMsg', a('mt_last'));
+    DB.set('mats', list.filter(m => m.id !== el.dataset.id));
+    const ps2 = products(); ps2.forEach(p => { if(p.mats) p.mats = p.mats.filter(x => x !== el.dataset.id); }); DB.set('products', ps2);
+    refreshShop(); renderAdmin();
+  },
+  'cl-del':el => {
+    const list = colors(); if(list.length <= 1) return msg('clMsg', a('mt_last'));
+    DB.set('colors', list.filter(c => c.id !== el.dataset.id));
+    const ps2 = products(); ps2.forEach(p => { if(p.colors) p.colors = p.colors.filter(x => x !== el.dataset.id); }); DB.set('products', ps2);
+    refreshShop(); renderAdmin();
+  },
   'c-edit':el => catDialog(el.dataset.id),
   'c-del':el => { if(products().some(p => p.cat === el.dataset.id)){ msg('catMsg', a('c_in_use')); return; } DB.set('cats', cats().filter(c => c.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
   'u-orders':el => { const list = orders().filter(o => o.userId === el.dataset.id).sort((x, y) => y.ts - x.ts); const u = users().find(x => x.id === el.dataset.id); openDlg(u ? u.name : '', list.length ? `<div class="tablewrap"><table style="min-width:520px">${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`, true); },
@@ -1332,11 +1395,31 @@ const FORMS = {
     const fb = name.hu || name.en || name.ru; if(!fb) return msg('pfErr', a('p_name_req'));
     ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; if(!desc[l]) desc[l] = desc.hu || desc.en || desc.ru || ''; });
     const price = parseInt($('#pfPrice').value, 10); if(!(price > 0)) return msg('pfErr', a('p_price_req'));
-    const old = id ? prod(id) : null, data = {shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
+    const pm = $$('#pForm .pm:checked').map(x => x.value), pc = $$('#pForm .pc:checked').map(x => x.value);
+    if(!pm.length || !pc.length) return msg('pfErr', a('p_mc_req'));
+    const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
     const list = products();
     if(id){ const p = list.find(x => x.id === id); if(p) Object.assign(p, data); } else list.push(Object.assign({id:'p' + uid()}, data));
     if(!DB.set('products', list)) return msg('pfErr', a('p_photo_big'));
     closeDlg(); refreshShop(); renderAdmin();
+  },
+  mtForm:e => {
+    const old = e.target.dataset.id, id = $('#mtId').value.trim().toUpperCase().slice(0, 20), n = k => Math.max(0, parseInt($('#' + k).value, 10) || 0);
+    if(!id) return msg('mtErr', a('mt_req'));
+    const list = mats(); if(!old && list.some(m => m.id === id)) return msg('mtErr', a('mt_dup'));
+    const use = {}; ['hu','en','ru'].forEach(l => use[l] = $('#mu_' + l).value.trim());
+    const data = {id, pct:n('mt_pct'), temp:n('mt_temp'), S:Math.min(5, Math.max(1, n('mt_S'))), H:Math.min(5, Math.max(1, n('mt_H'))), F:Math.min(5, Math.max(1, n('mt_F'))), use};
+    if(old){ const m = list.find(x => x.id === old); if(m) Object.assign(m, data); } else list.push(data);
+    DB.set('mats', list); closeDlg(); refreshShop(); renderAdmin();
+  },
+  clForm:e => {
+    const old = e.target.dataset.id, name = {};
+    ['hu','en','ru'].forEach(l => name[l] = $('#cn2_' + l).value.trim());
+    const fb = name.hu || name.en || name.ru; if(!fb) return msg('clErr', a('mt_req'));
+    ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
+    const list = colors(), hex = $('#clHex').value;
+    if(old){ const c = list.find(x => x.id === old); if(c) Object.assign(c, {name, hex}); } else list.push({id:'c' + uid(), name, hex});
+    DB.set('colors', list); closeDlg(); refreshShop(); renderAdmin();
   },
   catForm:e => {
     const id = e.target.dataset.id, name = {};
