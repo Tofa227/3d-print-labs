@@ -2,28 +2,28 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 /* Layout: a shop window with a print-bed viewer. Hero shows one product being built layer by layer, the catalog is the body.
    Account and admin are plain, dense work views reached by hash (#account, #admin). Dark-first like the old site (#0a0a0f). */
 :root{
-  --bg:#0a0a0f; --surface:#12121a; --surface-2:#1a1a24; --line:#2a2a37; --fg:#ecebf1; --muted:#9a99aa;
-  --accent:#ff6a1a; --accent-ink:#120a05; --good:#3ddc97; --warn:#ffc24b; --bad:#ff6b78;
-  --font-display:'Unbounded','Onest',system-ui,sans-serif;
-  --font-body:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --bg:#0f0d0c; --surface:#181513; --surface-2:#211d1a; --line:#352f2a; --fg:#ece5da; --muted:#a89f92;
+  --accent:#e08a50; --accent-ink:#1a0f08; --edge:#00e5ff; --good:#3ddc97; --warn:#ffc24b; --bad:#ff6b78;
+  --font-display:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --font-body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'Share Tech Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   color-scheme:dark;
 }
 @media (prefers-color-scheme: light){
   :root:not([data-theme="dark"]){
-    --bg:#f3f4f7; --surface:#ffffff; --surface-2:#eceef3; --line:#d6d9e2; --fg:#14141c; --muted:#5d6071;
-    --accent:#d44700; --accent-ink:#ffffff; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
+    --bg:#f4efe7; --surface:#fffdf9; --surface-2:#ebe4d8; --line:#d8cebf; --fg:#1c1815; --muted:#665d52;
+    --accent:#a9501a; --accent-ink:#ffffff; --edge:#007c8c; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
   }
 }
 :root[data-theme="light"]{
-  --bg:#f3f4f7; --surface:#ffffff; --surface-2:#eceef3; --line:#d6d9e2; --fg:#14141c; --muted:#5d6071;
-  --accent:#d44700; --accent-ink:#ffffff; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
+  --bg:#f4efe7; --surface:#fffdf9; --surface-2:#ebe4d8; --line:#d8cebf; --fg:#1c1815; --muted:#665d52;
+  --accent:#a9501a; --accent-ink:#ffffff; --edge:#007c8c; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -34,16 +34,16 @@ body{
 }
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:60}
 .wrap{max-width:1240px;margin-inline:auto}
-h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.12;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1,h2,h3{font-family:var(--font-display);font-weight:500;line-height:1.02;margin:0;text-wrap:balance;letter-spacing:-.01em}
 p{margin:0}
 a{color:inherit}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
 .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
-.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--edge)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface-2);
-  padding:9px 14px;border-radius:6px;cursor:pointer;font-weight:500;text-decoration:none;white-space:nowrap}
+  padding:9px 14px;border-radius:2px;cursor:pointer;font-weight:500;text-decoration:none;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
 .btn.primary:hover{filter:brightness(1.08)}
@@ -55,8 +55,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .top-in{display:flex;align-items:center;gap:18px;min-height:58px;flex-wrap:wrap;padding-block:8px}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.02em}
-.logo i{font-style:normal;background:var(--accent);color:var(--accent-ink);padding:3px 7px;border-radius:4px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:.06em}
+.logo i{font-style:normal;font-family:var(--font-mono);font-size:14px;border:1px solid var(--edge);color:var(--edge);padding:2px 7px}
 nav.main{display:flex;gap:4px;flex-wrap:wrap;margin-right:auto}
 nav.main a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--muted);font-size:14px}
 nav.main a:hover{color:var(--fg);background:var(--surface-2)}
@@ -69,8 +69,11 @@ nav.main a:hover{color:var(--fg);background:var(--surface-2)}
 
 /* hero */
 .hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:32px;align-items:center;padding-block:44px 0}
-.hero h1{font-size:clamp(28px,4.4vw,50px);margin-top:14px}
-.hero h1 em{font-style:normal;color:var(--accent)}
+.hero h1{font-size:clamp(44px,7vw,92px);margin-top:14px;font-weight:400;line-height:.94}
+.hero h1 em{font-style:italic;color:var(--accent)}
+.hero{position:relative}
+.hero::before{content:"";position:absolute;inset:auto -16px -1px -16px;height:46%;background-image:linear-gradient(color-mix(in srgb,var(--edge) 14%,transparent) 1px,transparent 1px),linear-gradient(90deg,color-mix(in srgb,var(--edge) 14%,transparent) 1px,transparent 1px);background-size:56px 56px;-webkit-mask-image:linear-gradient(transparent,#000);mask-image:linear-gradient(transparent,#000);pointer-events:none}
+.hero>*{position:relative}
 .hero p.lead{color:var(--muted);max-width:50ch;margin-top:16px;font-size:16px}
 .hero .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 .facts{display:grid;margin-top:26px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:520px}
@@ -81,7 +84,10 @@ nav.main a:hover{color:var(--fg);background:var(--surface-2)}
 @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:28px}}
 
 /* viewer */
-.viewer{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;min-width:0}
+.viewer{border:1px solid color-mix(in srgb,var(--edge) 45%,var(--line));border-radius:2px;background:var(--surface);overflow:hidden;min-width:0}
+.stage::before,.stage::after{content:"";position:absolute;width:22px;height:22px;z-index:2;pointer-events:none}
+.stage::before{left:8px;bottom:8px;border-left:2px solid var(--edge);border-bottom:2px solid var(--edge)}
+.stage::after{right:8px;top:8px;border-right:2px solid var(--accent);border-top:2px solid var(--accent)}
 .stage{position:relative;aspect-ratio:4/3;width:100%;max-height:560px;
   background:radial-gradient(120% 90% at 50% 100%,color-mix(in srgb,var(--accent) 14%,var(--surface-2)),var(--surface-2) 60%);touch-action:pan-y;cursor:grab}
 .stage:active{cursor:grabbing}
@@ -98,7 +104,7 @@ input[type=range]{accent-color:var(--accent)}
 /* catalog */
 section.sec{padding-block:72px 0}
 .sec-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-.sec-head h2{font-size:clamp(22px,3vw,32px)}
+.sec-head h2{font-size:clamp(34px,4.4vw,54px);font-weight:400}
 .sec-head p{color:var(--muted);max-width:52ch}
 .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
 .search{flex:1;min-width:180px;max-width:320px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 12px}
@@ -109,11 +115,11 @@ section.sec{padding-block:72px 0}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:460px){.grid{grid-template-columns:1fr}}
-.card{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card{border:1px solid var(--line);border-radius:2px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .card .ph{aspect-ratio:4/3;background:var(--surface-2);display:block;width:100%;border:0;padding:0;cursor:pointer;overflow:hidden}
 .card .ph img{width:100%;height:100%;object-fit:cover;display:block}
 .card .bd{padding:12px 14px 14px;display:grid;gap:10px;flex:1;align-content:start}
-.card h3{font-family:var(--font-body);font-weight:600;font-size:15px;letter-spacing:0}
+.card h3{font-family:var(--font-display);font-weight:500;font-size:24px;letter-spacing:0}
 .card .tagline{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .card .meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .card .pr{font-family:var(--font-mono);font-weight:500;color:var(--accent)}
@@ -327,7 +333,7 @@ const MATS = [
   {id:'ASA',  mul:1.20, S:4, H:3, F:2, temp:95}
 ];
 const COLORS = [
-  {id:'graphite',hex:'#2d2f36'},{id:'white',hex:'#eeeeea'},{id:'orange',hex:'#ff6a1a'},{id:'blue',hex:'#2f6bff'},
+  {id:'graphite',hex:'#2d2f36'},{id:'white',hex:'#eeeeea'},{id:'orange',hex:'#e08a50'},{id:'blue',hex:'#2f6bff'},
   {id:'green',hex:'#2fbf71'},{id:'red',hex:'#e5384b'},{id:'grey',hex:'#8a8f99'}
 ];
 const STATUSES = ['new','confirmed','printing','ready','done','cancelled'];
@@ -402,7 +408,7 @@ const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(3
 const T = {
 hu:{
  nav_catalog:'Katalógus',nav_materials:'Anyagok',nav_process:'Hogyan rendelj',nav_faq:'GYIK',cart:'Kosár',
- hero_eyebrow:'3D NYOMTATOTT TERMÉKEK · MAGYARORSZÁG',hero_h1:'Kész tárgyak, <em>rétegről rétegre</em>.',
+ hero_eyebrow:'3D NYOMTATOTT TERMÉKEK · MAGYARORSZÁG',hero_h1:'Kész tárgyak, <em>rétegről</em> rétegre.',
  hero_p:'Otthonra, asztalra, játékhoz és műhelybe. Válassz anyagot és színt, a darabot megrendelés után legyártjuk, és átvételre készen kapod.',
  hero_cta:'Katalógus',f_products:'Termékek',f_mats:'Anyagok',f_layer:'Rétegvastagság',f_recv:'Átvétel',f_recv_v:'Tab · Siófok · csomagpont · házhoz',
  play:'Lejátszás',pause:'Megállít',layer:'réteg',no_webgl:'A 3D előnézet ezen az eszközön nem érhető el.',details:'Részletek',
@@ -435,7 +441,7 @@ hu:{
 },
 en:{
  nav_catalog:'Catalog',nav_materials:'Materials',nav_process:'How to order',nav_faq:'FAQ',cart:'Cart',
- hero_eyebrow:'3D-PRINTED PRODUCTS · HUNGARY',hero_h1:'Ready-made objects, <em>layer by layer</em>.',
+ hero_eyebrow:'3D-PRINTED PRODUCTS · HUNGARY',hero_h1:'Ready-made objects, <em>layer</em> by layer.',
  hero_p:'For the home, the desk, play and the workshop. Pick a material and colour; we print your piece after you order and have it ready for pick-up.',
  hero_cta:'Catalog',f_products:'Products',f_mats:'Materials',f_layer:'Layer height',f_recv:'Receive',f_recv_v:'Tab · Siófok · parcel point · home',
  play:'Play',pause:'Pause',layer:'layer',no_webgl:'3D preview is not available on this device.',details:'Details',
@@ -468,7 +474,7 @@ en:{
 },
 ru:{
  nav_catalog:'Каталог',nav_materials:'Материалы',nav_process:'Как заказать',nav_faq:'FAQ',cart:'Корзина',
- hero_eyebrow:'3D-ПЕЧАТНЫЕ ТОВАРЫ · ВЕНГРИЯ',hero_h1:'Готовые вещи, <em>слой за слоем</em>.',
+ hero_eyebrow:'3D-ПЕЧАТНЫЕ ТОВАРЫ · ВЕНГРИЯ',hero_h1:'Готовые вещи, <em>слой</em> за слоем.',
  hero_p:'Для дома, стола, игр и мастерской. Выбери материал и цвет: после заказа мы напечатаем изделие и подготовим к выдаче.',
  hero_cta:'Каталог',f_products:'Товаров',f_mats:'Материалы',f_layer:'Высота слоя',f_recv:'Получение',f_recv_v:'Таб · Шиофок · пункт выдачи · дом',
  play:'Играть',pause:'Стоп',layer:'слой',no_webgl:'3D-просмотр на этом устройстве недоступен.',details:'Подробнее',
@@ -655,11 +661,11 @@ void main(){
   gl_FragColor = vec4(c, 1.0);
 }`;
 const hexVec = h => { const c = new THREE.Color(h); return new THREE.Vector3(c.r, c.g, c.b); };
-const accentHex = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff6a1a';
+const accentHex = () => getComputedStyle(document.documentElement).getPropertyValue('--edge').trim() || '#00e5ff';
 function mkMat(hex){
   return new THREE.ShaderMaterial({
     vertexShader:VERT, fragmentShader:FRAG, side:THREE.DoubleSide,
-    uniforms:{uColor:{value:hexVec(hex)}, uAccent:{value:hexVec('#ff6a1a')}, uClip:{value:1e9}, uStep:{value:1.5}, uActive:{value:0}}
+    uniforms:{uColor:{value:hexVec(hex)}, uAccent:{value:hexVec('#00e5ff')}, uClip:{value:1e9}, uStep:{value:1.5}, uActive:{value:0}}
   });
 }
 const VIEWERS = new Set();
@@ -815,7 +821,7 @@ function renderHeroChip(){
 function syncHero(){
   renderHeroChip();
   const p = heroProduct();
-  if(HV && HV.ok && p) HV.setProduct(p.shape, '#ff6a1a');
+  if(HV && HV.ok && p) HV.setProduct(p.shape, '#e08a50');
 }
 function refreshShop(){ renderChips(); renderCatalog(); renderStatic(); syncHero(); cart = cart.filter(l => prod(l.pid)); saveCart(); }
 
@@ -1418,7 +1424,7 @@ $('#cartBtn').addEventListener('click', () => openCart());
   $('#heroTopWrap').id = 'heroTop';
   saveCart(); applyLang();
   HV = createViewer($('#heroView'));
-  const hp = heroProduct(); if(hp) HV.setProduct(hp.shape, '#ff6a1a');
+  const hp = heroProduct(); if(hp) HV.setProduct(hp.shape, '#e08a50');
   route();
 })();
 </script>
