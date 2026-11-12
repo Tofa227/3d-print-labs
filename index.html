@@ -1,0 +1,1424 @@
+<title>3D Print Labs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout: a shop window with a print-bed viewer. Hero shows one product being built layer by layer, the catalog is the body.
+   Account and admin are plain, dense work views reached by hash (#account, #admin). Dark-first like the old site (#0a0a0f). */
+:root{
+  --bg:#0a0a0f; --surface:#12121a; --surface-2:#1a1a24; --line:#2a2a37; --fg:#ecebf1; --muted:#9a99aa;
+  --accent:#ff6a1a; --accent-ink:#120a05; --good:#3ddc97; --warn:#ffc24b; --bad:#ff6b78;
+  --font-display:'Unbounded','Onest',system-ui,sans-serif;
+  --font-body:'Onest',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f3f4f7; --surface:#ffffff; --surface-2:#eceef3; --line:#d6d9e2; --fg:#14141c; --muted:#5d6071;
+    --accent:#d44700; --accent-ink:#ffffff; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f3f4f7; --surface:#ffffff; --surface-2:#eceef3; --line:#d6d9e2; --fg:#14141c; --muted:#5d6071;
+  --accent:#d44700; --accent-ink:#ffffff; --good:#0f8a58; --warn:#8a5a00; --bad:#c42b3b; color-scheme:light;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg); color:var(--fg); font-family:var(--font-body); font-size:15px; line-height:1.55; margin:0;
+  padding-block:0; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  overflow-x:hidden;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:60}
+.wrap{max-width:1240px;margin-inline:auto}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.12;margin:0;text-wrap:balance;letter-spacing:-.01em}
+p{margin:0}
+a{color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface-2);
+  padding:9px 14px;border-radius:6px;cursor:pointer;font-weight:500;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* header */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:18px;min-height:58px;flex-wrap:wrap;padding-block:8px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--font-display);font-weight:700;font-size:15px;letter-spacing:.02em}
+.logo i{font-style:normal;background:var(--accent);color:var(--accent-ink);padding:3px 7px;border-radius:4px}
+nav.main{display:flex;gap:4px;flex-wrap:wrap;margin-right:auto}
+nav.main a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--muted);font-size:14px}
+nav.main a:hover{color:var(--fg);background:var(--surface-2)}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 9px;cursor:pointer;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface-2);color:var(--fg)}
+.cart-btn .n{background:var(--accent);color:var(--accent-ink);border-radius:10px;min-width:20px;padding:0 6px;font-size:12px;font-family:var(--font-mono);line-height:20px;text-align:center}
+#accBtn{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:32px;align-items:center;padding-block:44px 0}
+.hero h1{font-size:clamp(28px,4.4vw,50px);margin-top:14px}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p.lead{color:var(--muted);max-width:50ch;margin-top:16px;font-size:16px}
+.hero .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.facts{display:grid;margin-top:26px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-width:520px}
+.facts div{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px}
+.facts div:last-child{border-bottom:0}
+.facts span:first-child{color:var(--muted)}
+.facts span:last-child{text-align:right}
+@media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:28px}}
+
+/* viewer */
+.viewer{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;min-width:0}
+.stage{position:relative;aspect-ratio:4/3;width:100%;max-height:560px;
+  background:radial-gradient(120% 90% at 50% 100%,color-mix(in srgb,var(--accent) 14%,var(--surface-2)),var(--surface-2) 60%);touch-action:pan-y;cursor:grab}
+.stage:active{cursor:grabbing}
+.stage canvas{display:block;width:100%;height:100%}
+.stage-top{position:absolute;left:12px;right:12px;top:12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start;pointer-events:none}
+.stage-top>*{pointer-events:auto}
+.chip{font-family:var(--font-mono);font-size:12px;background:color-mix(in srgb,var(--bg) 78%,transparent);border:1px solid var(--line);border-radius:6px;padding:5px 9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.novgl{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+.scrub{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.scrub input[type=range]{flex:1;min-width:0}
+.scrub .lay{font-family:var(--font-mono);font-size:12px;color:var(--muted);min-width:122px;text-align:right}
+input[type=range]{accent-color:var(--accent)}
+
+/* catalog */
+section.sec{padding-block:72px 0}
+.sec-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.sec-head h2{font-size:clamp(22px,3vw,32px)}
+.sec-head p{color:var(--muted);max-width:52ch}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.search{flex:1;min-width:180px;max-width:320px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:8px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.opt{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;font-family:var(--font-mono)}
+.opt[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface-2))}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.grid{grid-template-columns:1fr}}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card .ph{aspect-ratio:4/3;background:var(--surface-2);display:block;width:100%;border:0;padding:0;cursor:pointer;overflow:hidden}
+.card .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.card .bd{padding:12px 14px 14px;display:grid;gap:10px;flex:1;align-content:start}
+.card h3{font-family:var(--font-body);font-weight:600;font-size:15px;letter-spacing:0}
+.card .tagline{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.card .meta{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card .pr{font-family:var(--font-mono);font-weight:500;color:var(--accent)}
+.card .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.dots{display:flex;gap:8px;flex-wrap:wrap}
+.dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
+.dot[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+.empty{padding:40px 0;color:var(--muted)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:14px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.nm{font-family:var(--font-mono);font-weight:500;white-space:nowrap}
+td.r,th.r{text-align:right}
+.bar{display:inline-flex;gap:3px}
+.bar i{width:12px;height:6px;border-radius:2px;background:var(--line)}
+.bar i.on{background:var(--accent)}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+.step{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--surface)}
+.step .n{font-family:var(--font-mono);color:var(--accent);font-size:13px}
+.step h3{font-family:var(--font-body);font-size:16px;margin:8px 0 6px}
+.step p{color:var(--muted);font-size:14px}
+.layers{height:46px;margin:-2px 0 14px;display:flex;flex-direction:column;justify-content:flex-end;gap:3px}
+.layers i{display:block;height:3px;background:var(--line);border-radius:1px}
+.faq{display:grid;gap:8px;max-width:860px}
+.faq details{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 14px}
+.faq summary{cursor:pointer;padding:14px 0;font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::after{content:"+";font-family:var(--font-mono);color:var(--accent)}
+.faq details[open] summary::after{content:"–"}
+.faq details p{color:var(--muted);padding-bottom:14px}
+footer.ft{margin-top:84px;border-top:1px solid var(--line);padding-block:28px 40px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+footer.ft a{color:var(--muted)}
+
+/* modals */
+.ov{position:fixed;inset:0;z-index:80;background:rgba(5,5,10,.66);display:flex;justify-content:center;align-items:flex-start;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));overflow-y:auto}
+#dlgOv{z-index:90}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:12px;width:100%;max-width:640px;margin-block:auto;padding:18px;display:grid;gap:14px}
+.modal.wide{max-width:960px}
+.modal h2{font-size:20px}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.x{border:0;background:transparent;font-size:24px;cursor:pointer;color:var(--muted);line-height:1}
+.pgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.pgrid{grid-template-columns:1fr}}
+.pinfo{display:grid;gap:16px;min-width:0}
+.pinfo .desc{color:var(--muted)}
+.lbl{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:var(--font-mono)}
+.kv{display:grid;gap:5px;font-size:13px}
+.kv div{display:flex;justify-content:space-between;gap:10px}
+.kv span:first-child{color:var(--muted)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row2{grid-template-columns:1fr}}
+.num{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);overflow:hidden}
+.num input{width:100%;min-width:0;border:0;background:transparent;text-align:center;padding:7px 4px;font-family:var(--font-mono)}
+.num button{border:0;background:transparent;width:34px;height:34px;cursor:pointer;font-size:16px;color:var(--muted)}
+.num button:hover{color:var(--fg)}
+.total{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 4px;gap:10px;flex-wrap:wrap}
+.total b{font-family:var(--font-display);font-size:clamp(22px,3vw,28px);font-weight:700;color:var(--accent)}
+.small{font-size:12px;color:var(--muted)}
+.line{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.line .t{font-weight:500}
+.line .s{color:var(--muted);font-size:12px;font-family:var(--font-mono);grid-column:1}
+.line .p{font-family:var(--font-mono);text-align:right;grid-row:1}
+.line .a{grid-column:1/-1;display:flex;gap:10px;align-items:center}
+.link{border:0;background:none;color:var(--muted);cursor:pointer;text-decoration:underline;font-size:12px;padding:0}
+.rad{display:grid;gap:6px}
+.rad label{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:8px 10px;cursor:pointer;font-size:14px}
+.rad label span.pp{margin-left:auto;font-family:var(--font-mono);color:var(--muted)}
+.sumrow{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0}
+.sumrow span:first-child{color:var(--muted)}
+.form{display:grid;gap:12px}
+.form label.f,label.f{display:grid;gap:5px;font-size:12px;color:var(--muted);font-family:var(--font-mono);letter-spacing:.04em;text-transform:uppercase}
+.form input,.form select,.form textarea,.inp{border:1px solid var(--line);border-radius:6px;background:var(--surface-2);padding:9px 10px;width:100%;min-width:0;text-transform:none;letter-spacing:0;font-family:var(--font-body);color:var(--fg);font-size:15px}
+.form input[type=checkbox]{width:auto}
+label.ck{display:flex;gap:8px;align-items:center;font-size:14px;text-transform:none;letter-spacing:0;font-family:var(--font-body);color:var(--fg)}
+.err{color:var(--bad);font-size:12px;text-transform:none;letter-spacing:0;font-family:var(--font-body)}
+.ok{color:var(--good);font-size:12px;text-transform:none;letter-spacing:0;font-family:var(--font-body)}
+.phone{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.phone .pre{display:grid;place-items:center;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);font-family:var(--font-mono);color:var(--accent)}
+pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:12px;max-height:240px;overflow:auto}
+.cpbox{display:grid;grid-template-columns:1fr auto;gap:8px}
+
+/* account + admin */
+.view{padding-block:36px 0}
+.view h1{font-size:clamp(22px,3vw,30px)}
+.vhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.st{display:inline-block;font-family:var(--font-mono);font-size:11px;letter-spacing:.04em;padding:3px 8px;border-radius:5px;border:1px solid var(--line);white-space:nowrap}
+.st.new{color:var(--accent);border-color:var(--accent)}
+.st.confirmed,.st.printing{color:var(--warn);border-color:var(--warn)}
+.st.ready,.st.done,.st.active{color:var(--good);border-color:var(--good)}
+.st.cancelled,.st.expired,.st.used,.st.off{color:var(--bad);border-color:var(--bad)}
+.ocard{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:14px 16px;display:grid;gap:12px;margin-bottom:12px}
+.ocard .top2{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.stepper{display:flex;gap:0;list-style:none;margin:0;padding:0;font-size:12px}
+.stepper li{flex:1;min-width:0;text-align:center;color:var(--muted);position:relative;padding-top:16px;font-family:var(--font-mono)}
+.stepper li::before{content:"";position:absolute;left:0;right:0;top:5px;height:3px;background:var(--line)}
+.stepper li::after{content:"";position:absolute;left:50%;top:0;width:12px;height:12px;border-radius:50%;background:var(--line);transform:translateX(-50%)}
+.stepper li.on{color:var(--fg)}
+.stepper li.on::before,.stepper li.on::after{background:var(--accent)}
+.stepper li.cur::after{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 30%,transparent)}
+.cplist{display:grid;gap:10px}
+.coupon{border:1px dashed var(--line);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;background:var(--surface)}
+.coupon b{font-family:var(--font-mono);font-size:16px;color:var(--accent)}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.stat{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:12px 14px}
+.stat small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.stat b{font-family:var(--font-mono);font-weight:500;font-size:20px}
+.rowbtns{display:flex;gap:6px;flex-wrap:wrap}
+.thumb{width:48px;height:36px;border-radius:5px;background:var(--surface-2);object-fit:cover;display:block}
+.hint{border:1px solid var(--line);border-radius:8px;background:var(--surface-2);padding:10px 12px;font-size:13px;color:var(--muted)}
+.sub{font-family:var(--font-display);font-size:16px;margin:26px 0 12px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+
+<div class="wrap">
+<header class="top"><div class="top-in">
+  <a class="logo" href="#top" aria-label="3D Print Labs"><i>3D</i><span>PRINT LABS</span></a>
+  <nav class="main" aria-label="Main">
+    <a href="#catalog" data-i18n="nav_catalog"></a><a href="#materials" data-i18n="nav_materials"></a>
+    <a href="#process" data-i18n="nav_process"></a><a href="#faq" data-i18n="nav_faq"></a>
+  </nav>
+  <div class="tools">
+    <div class="seg" id="langSeg" role="group" aria-label="Language">
+      <button data-lang="hu" aria-pressed="false">HU</button><button data-lang="en" aria-pressed="false">EN</button><button data-lang="ru" aria-pressed="false">RU</button>
+    </div>
+    <button class="btn sm" id="themeBtn" aria-label="Theme" title="Theme">◐</button>
+    <button class="btn sm" id="accBtn" data-act="acc-open"></button>
+    <button class="btn sm cart-btn" id="cartBtn"><span data-i18n="cart"></span> <span class="n" id="cartN">0</span></button>
+  </div>
+</div></header>
+
+<div id="viewShop">
+<main id="top">
+<div class="hero">
+  <div>
+    <div class="eyebrow" data-i18n="hero_eyebrow"></div>
+    <h1 data-i18n-html="hero_h1"></h1>
+    <p class="lead" data-i18n="hero_p"></p>
+    <div class="cta"><a class="btn primary" href="#catalog" data-i18n="hero_cta"></a><a class="btn" href="#materials" data-i18n="nav_materials"></a></div>
+    <div class="facts">
+      <div><span data-i18n="f_products"></span><span class="mono" id="factCount"></span></div>
+      <div><span data-i18n="f_mats"></span><span class="mono">PLA · PETG · ABS · ASA</span></div>
+      <div><span data-i18n="f_layer"></span><span class="mono">0,2 mm</span></div>
+      <div><span data-i18n="f_recv"></span><span class="mono" data-i18n="f_recv_v"></span></div>
+    </div>
+  </div>
+  <div class="viewer" id="heroView"></div>
+</div>
+
+<section class="sec" id="catalog">
+  <div class="sec-head"><h2 data-i18n="c_title"></h2><p data-i18n="c_sub"></p></div>
+  <div class="filters">
+    <input class="search" id="q" type="search" data-i18n-ph="c_search" autocomplete="off">
+    <div class="chips" id="catChips"></div>
+  </div>
+  <div class="grid" id="products"></div>
+  <p class="empty" id="noRes" hidden data-i18n="c_none"></p>
+</section>
+
+<section class="sec" id="materials">
+  <div class="sec-head"><h2 data-i18n="m_title"></h2><p data-i18n="m_sub"></p></div>
+  <div class="tablewrap"><table id="matTable"></table></div>
+</section>
+
+<section class="sec" id="process">
+  <div class="sec-head"><h2 data-i18n="pc_title"></h2></div>
+  <div class="steps" id="steps"></div>
+</section>
+
+<section class="sec" id="faq">
+  <div class="sec-head"><h2 data-i18n="faq_title"></h2></div>
+  <div class="faq" id="faqList"></div>
+</section>
+</main>
+</div>
+
+<main class="view" id="viewAccount" hidden></main>
+<main class="view" id="viewAdmin" hidden></main>
+
+<footer class="ft">
+  <span>© 3D Print Labs · www.3d-print-labs.com · @3dprintlabs</span>
+  <span><span data-i18n="ft_note"></span> · <a href="#admin" id="adminLink">Admin</a></span>
+</footer>
+</div>
+
+<div class="ov" id="prodOv" hidden><div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="pName">
+  <div class="mh"><span class="eyebrow" id="pCat"></span><button class="x" data-act="close-prod" aria-label="Close">×</button></div>
+  <div class="pgrid"><div class="viewer" id="mView"></div><div class="pinfo" id="mInfo"></div></div>
+</div></div>
+
+<div class="ov" id="cartOv" hidden><div class="modal" role="dialog" aria-modal="true" aria-labelledby="cartH">
+  <div class="mh"><h2 id="cartH" data-i18n="ct_title"></h2><button class="x" data-act="close-cart" aria-label="Close">×</button></div>
+  <div id="cartBody"></div>
+</div></div>
+
+<div class="ov" id="dlgOv" hidden><div class="modal" id="dlgBox" role="dialog" aria-modal="true">
+  <div class="mh"><h2 id="dlgTitle"></h2><button class="x" data-act="close-dlg" aria-label="Close">×</button></div>
+  <div id="dlgBody"></div>
+</div></div>
+
+<script>
+const LAYER = 0.2;
+const MATS = [
+  {id:'PLA',  mul:1,    S:3, H:1, F:1, temp:55},
+  {id:'PETG', mul:1.10, S:4, H:2, F:2, temp:75},
+  {id:'ABS',  mul:1.15, S:4, H:3, F:2, temp:95},
+  {id:'ASA',  mul:1.20, S:4, H:3, F:2, temp:95}
+];
+const COLORS = [
+  {id:'graphite',hex:'#2d2f36'},{id:'white',hex:'#eeeeea'},{id:'orange',hex:'#ff6a1a'},{id:'blue',hex:'#2f6bff'},
+  {id:'green',hex:'#2fbf71'},{id:'red',hex:'#e5384b'},{id:'grey',hex:'#8a8f99'}
+];
+const STATUSES = ['new','confirmed','printing','ready','done','cancelled'];
+const FLOW = ['new','confirmed','printing','ready','done'];
+
+/* ---------- seed data ---------- */
+const tr3 = (hu, en, ru) => ({hu, en, ru});
+const SEED_CATS = [
+  {id:'home', name:tr3('Otthon','Home','Дом')}, {id:'desk', name:tr3('Asztal','Desk','Стол')},
+  {id:'play', name:tr3('Játék','Play','Игры')}, {id:'parts', name:tr3('Alkatrész','Parts','Детали')}
+];
+const SEED_PRODUCTS = [
+ ['vase','home',2990,tr3('Bordázott váza','Ribbed vase','Ребристая ваза'),tr3('Csavart, bordázott sziluett. Dekorációnak és száraz virághoz, vízhez nem ajánlott.','Twisted, ribbed silhouette. For decor and dried flowers; not recommended for water.','Закрученный ребристый силуэт. Для декора и сухоцветов, для воды не рекомендуется.')],
+ ['planter','home',2290,tr3('Pozsgás cserép','Succulent planter','Горшок для суккулента'),tr3('Kisméretű, kúpos cserép pozsgásnak vagy kaktusznak.','Small tapered pot for succulents or cacti.','Небольшой конический горшок для суккулентов и кактусов.')],
+ ['lamp','home',4490,tr3('Lámpabúra','Lampshade','Абажур'),tr3('Díszlámpa-búra. Használj LED izzót, a búra ne érjen hőforráshoz.','Shade for a decorative lamp. Use an LED bulb and keep the shade away from heat sources.','Абажур для декоративной лампы. Используй LED-лампу и не ставь рядом с источниками тепла.')],
+ ['stand','desk',1890,tr3('Telefontartó','Phone stand','Подставка для телефона'),tr3('Stabil, döntött telefontartó asztalra.','Stable, tilted phone stand for the desk.','Устойчивая наклонная подставка для телефона на стол.')],
+ ['hook','desk',1690,tr3('Fejhallgató-akasztó','Headphone hook','Крючок для наушников'),tr3('Fejhallgató-akasztó lapos hátlappal, ragasztáshoz vagy csavarozáshoz.','Headphone hook with a flat back for gluing or screwing.','Крючок для наушников с плоской задней частью под клей или винты.')],
+ ['clip','desk',1490,tr3('Kábelrendező','Cable organiser','Органайзер для кабеля'),tr3('Íves kábelrendező széles talppal. Az ár 1 darabra vonatkozik.','Curved cable organiser with a wide base. Price is per piece.','Изогнутый органайзер для кабеля с широким основанием. Цена за 1 штуку.')],
+ ['pencup','desk',1990,tr3('Tolltartó pohár','Pen cup','Стакан для ручек'),tr3('Tolltartó pohár az íróasztalra.','Pen cup for the desk.','Стакан для ручек на рабочий стол.')],
+ ['knot','play',3490,tr3('Csomó asztali figura','Knot desk figure','Узел, настольная фигурка'),tr3('Torus-csomó, díszként az asztalra. A rétegvonalak a látványhoz tartoznak.','Torus knot as a desk ornament. Layer lines are part of the look.','Тор-узел как украшение стола. Линии слоёв часть внешнего вида.')],
+ ['pawn','play',1790,tr3('Sakk-gyalog','Chess pawn','Шахматная пешка'),tr3('Sakk-gyalog, a bástyával egy sorozatból.','Chess pawn, same series as the rook.','Шахматная пешка, из одной серии с ладьёй.')],
+ ['rook','play',2190,tr3('Sakk-bástya','Chess rook','Шахматная ладья'),tr3('Sakk-bástya négy fogazattal.','Chess rook with four crenels.','Шахматная ладья с четырьмя зубцами.')],
+ ['gear','parts',1250,tr3('Fogaskerék','Gear','Шестерня'),tr3('Egyenes fogazású fogaskerék, 16 fog, 8 mm-es furat.','Spur gear, 16 teeth, 8 mm bore.','Прямозубая шестерня, 16 зубьев, отверстие 8 мм.')],
+ ['spool','parts',990,tr3('Orsóadapter','Spool adapter','Адаптер катушки'),tr3('Filament-orsó adapter, 20 mm-es belső furat.','Filament spool adapter, 20 mm inner bore.','Адаптер для катушки филамента, внутреннее отверстие 20 мм.')]
+].map(a => ({id:a[0], shape:a[0], cat:a[1], price:a[2], name:a[3], desc:a[4], active:true, photo:''}));
+const SEED_DELIVERY = [
+  {id:'tab',    type:'pickup', enabled:true, fee:0,    name:tr3('Személyes átvétel: Tab','Pick-up: Tab','Самовывоз: Таб')},
+  {id:'siofok', type:'pickup', enabled:true, fee:0,    name:tr3('Személyes átvétel: Siófok','Pick-up: Siófok','Самовывоз: Шиофок')},
+  {id:'point',  type:'point',  enabled:true, fee:1490, name:tr3('Csomagpont','Parcel point','Пункт выдачи')},
+  {id:'home',   type:'home',   enabled:true, fee:1990, name:tr3('Házhoz szállítás','Home delivery','Доставка на дом')}
+];
+const SEED_COUPONS = [
+  {code:'WELCOME10', type:'percent', value:10,  min:0,    expires:'', maxUses:0, used:0, oncePerUser:true, active:true, grant:true},
+  {code:'TAB500',    type:'fixed',   value:500, min:5000, expires:'', maxUses:0, used:0, oncePerUser:true, active:true, grant:false}
+];
+const SEED_SETTINGS = {leadMin:2, leadMax:4};
+
+/* ---------- storage ---------- */
+const MEM = {};
+const HAS_LS = (() => { try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return true; } catch(e){ return false; } })();
+const DB = {
+  get(k, def){ try { const raw = HAS_LS ? localStorage.getItem('pl2_' + k) : MEM[k]; return raw ? JSON.parse(raw) : def; } catch(e){ return def; } },
+  set(k, v){ const s = JSON.stringify(v); if(HAS_LS){ try { localStorage.setItem('pl2_' + k, s); return true; } catch(e){ return false; } } MEM[k] = s; return true; },
+  del(k){ if(HAS_LS){ try { localStorage.removeItem('pl2_' + k); } catch(e){} } delete MEM[k]; },
+  wipe(){ if(HAS_LS){ try { Object.keys(localStorage).filter(k => k.startsWith('pl2_')).forEach(k => localStorage.removeItem(k)); } catch(e){} } Object.keys(MEM).forEach(k => delete MEM[k]); }
+};
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
+const products = () => DB.get('products', []);
+const cats = () => DB.get('cats', []);
+const users = () => DB.get('users', []);
+const orders = () => DB.get('orders', []);
+const coupons = () => DB.get('coupons', []);
+const deliveries = () => DB.get('delivery', []);
+const settings = () => Object.assign({}, SEED_SETTINGS, DB.get('settings', {}));
+const prod = id => products().find(p => p.id === id);
+const activeProducts = () => products().filter(p => p.active);
+async function hash(s){
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pl:' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch(e){ return 'b64:' + btoa(unescape(encodeURIComponent('pl:' + s))); }
+}
+async function seed(){
+  if(DB.get('seeded', false)) return;
+  DB.set('cats', SEED_CATS); DB.set('products', SEED_PRODUCTS); DB.set('delivery', SEED_DELIVERY); DB.set('coupons', SEED_COUPONS);
+  DB.set('settings', SEED_SETTINGS); DB.set('users', []); DB.set('orders', []); DB.set('cart', []);
+  DB.set('admin', {login:'admin', hash:await hash('admin')});
+  DB.set('seeded', true);
+}
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+
+/* ---------- i18n (shop) ---------- */
+const T = {
+hu:{
+ nav_catalog:'Katalógus',nav_materials:'Anyagok',nav_process:'Hogyan rendelj',nav_faq:'GYIK',cart:'Kosár',
+ hero_eyebrow:'3D NYOMTATOTT TERMÉKEK · MAGYARORSZÁG',hero_h1:'Kész tárgyak, <em>rétegről rétegre</em>.',
+ hero_p:'Otthonra, asztalra, játékhoz és műhelybe. Válassz anyagot és színt, a darabot megrendelés után legyártjuk, és átvételre készen kapod.',
+ hero_cta:'Katalógus',f_products:'Termékek',f_mats:'Anyagok',f_layer:'Rétegvastagság',f_recv:'Átvétel',f_recv_v:'Tab · Siófok · csomagpont · házhoz',
+ play:'Lejátszás',pause:'Megállít',layer:'réteg',no_webgl:'A 3D előnézet ezen az eszközön nem érhető el.',details:'Részletek',
+ c_title:'Katalógus',c_sub:'Kész modellek, amelyek közül választhatsz. Anyag és szín a termékoldalon is állítható.',c_search:'Keresés a katalógusban',c_all:'Mind',c_none:'Nincs találat.',c_add:'Kosárba',c_details:'Részletek',
+ md_material:'Anyag',md_color:'Szín',md_qty:'Darab',md_size:'Méret',md_lead:'Elkészülés',md_layer:'Réteg',md_total:'Összesen',days:'munkanap',
+ m_title:'Anyagok',m_sub:'A hőállóság hozzávetőleges, és függ a nyomtatási beállításoktól.',m_name:'Anyag',m_strength:'Szilárdság',m_heat:'Hőállóság',m_flex:'Rugalmasság',m_use:'Mire jó',m_extra:'Felár',
+ mat_use:{PLA:'Dekor, játék, minden, ami nem melegszik.',PETG:'Tartók, mechanikus alkatrész, konyhai és kültéri használat.',ABS:'Hőt álló, strapabíró tárgyak.',ASA:'Kültér, UV-álló, napfénynek kitett részek.'},
+ pc_title:'Hogyan rendelj',
+ steps:[['Válassz','Böngészd a katalógust, nézd meg a 3D modellt, állítsd be az anyagot és a színt.'],['Rendelj','Tedd kosárba, add meg az elérhetőséged és az átvétel módját. Fiókkal követheted a rendelésed.'],['Nyomtatás','A kiválasztott anyagból legyártjuk, és átnézzük az elkészült darabot.'],['Átvétel','Személyes átvétel Tabon vagy Siófokon, csomagpont vagy házhoz szállítás.']],
+ faq_title:'Gyakori kérdések',
+ faq:[['Mennyi idő alatt készül el egy termék?','Jellemzően {a}–{b} munkanap a megrendeléstől, a méretétől és a darabszámtól függően. Pontos időpontot a visszaigazolásban adunk.'],['Milyen anyagot válasszak?','Dekorációhoz és játékhoz a PLA bőven elég. Terheltebb vagy melegebb helyre PETG, ABS vagy ASA való, kültérre az ASA.'],['Biztosan olyan színű lesz, mint az előnézet?','Az előnézet tájékoztató, a filament árnyalata gyártónként kissé eltér. Ha fontos az árnyalat, írd meg a megjegyzésben.'],['Látszanak a rétegvonalak?','Igen, a 3D nyomtatott tárgyak jellegzetessége. A katalógus 0,2 mm-es rétegvastagsággal készül.'],['Hogyan veszem át?','Személyesen Tabon vagy Siófokon, csomagponton vagy házhoz szállítással. A díj a kosárban látszik.'],['Mire jó a fiók?','Követheted a rendeléseid állapotát, újrarendelhetsz, kuponokat tárolhatsz és mentheted az adataidat.']],
+ ft_note:'Árak forintban (HUF). Előnézeti változat: az adatok ebben a böngészőben tárolódnak.',
+ ct_title:'Kosár',ct_empty:'A kosár üres.',ct_remove:'Törlés',ct_delivery:'Átvétel',ct_total:'Végösszeg',ct_next:'Tovább a megrendeléshez',
+ co_name:'Név',co_country:'Ország',co_phone:'Telefon',co_email:'E-mail (nem kötelező)',co_tg:'Telegram (nem kötelező)',co_addr:'Cím vagy csomagpont',co_note:'Megjegyzés',co_submit:'Megrendelés elküldése',
+ e_name:'Add meg a neved.',e_phone:'A telefonszám 9 számjegy legyen.',e_email:'Érvénytelen e-mail cím.',e_addr:'Add meg a címet vagy a csomagpontot.',
+ co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Előnézeti változat: a rendelés nem hagyja el a böngészőt. Éles működéshez szerveroldali fogadás kell.',back:'Vissza',
+ co_sub:'Részösszeg',co_disc:'Kedvezmény',co_fee:'Szállítás',co_guest:'Hozz létre fiókot, hogy követhesd a rendeléseidet.',co_login_hint:'Belépve a rendelésed követhető a fiókodban.',co_myacc:'Fiókom megnyitása',
+ col:{graphite:'Grafit',white:'Fehér',orange:'Narancs',blue:'Kék',green:'Zöld',red:'Piros',grey:'Szürke'},
+ acc_login:'Belépés',acc_my:'Fiókom',acc_logout:'Kilépés',acc_hello:'Szia',
+ au_login_t:'Belépés',au_reg_t:'Regisztráció',au_email:'E-mail',au_pass:'Jelszó',au_name:'Név',au_phone:'Telefon',au_enter:'Belépés',au_create:'Fiók létrehozása',
+ au_to_reg:'Nincs még fiókod? Regisztráció',au_to_login:'Van már fiókod? Belépés',au_bad:'Hibás e-mail vagy jelszó.',au_exists:'Ezzel az e-mail címmel már van fiók.',au_pass_min:'A jelszó legalább 6 karakter legyen.',au_demo:'Előnézeti változat: a fiókok ebben a böngészőben tárolódnak.',
+ acc_orders:'Rendeléseim',acc_coupons:'Kuponok',acc_profile:'Adataim',
+ ord_none:'Még nincs rendelésed.',ord_reorder:'Újrarendelés',ord_items:'Tételek',ord_hist:'Állapotváltások',ord_cancelled:'A rendelés le lett mondva.',ord_shop:'Vissza a katalógushoz',
+ st:{new:'Új',confirmed:'Visszaigazolva',printing:'Nyomtatás',ready:'Átvehető',done:'Átvéve',cancelled:'Lemondva'},
+ cp_title:'Kuponjaim',cp_add_ph:'Kuponkód',cp_add:'Hozzáadás',cp_none:'Még nincs kuponod. Add meg a kuponkódot fent.',cp_code:'Kuponkód',cp_apply:'Beváltás',cp_remove:'Eltávolít',cp_applied:'Kupon alkalmazva',
+ cp_off_pct:'−{v}% a rendelésre',cp_off_fix:'−{v} Ft a rendelésre',cp_min_s:'min. rendelés {v}',cp_until_s:'érvényes: {v}',
+ cp_active:'Érvényes',cp_used:'Felhasználva',cp_expired:'Lejárt',cp_added:'Kupon hozzáadva.',
+ cp_invalid:'Ismeretlen vagy inaktív kuponkód.',cp_expired_m:'A kupon lejárt.',cp_limit:'A kupon elfogyott.',cp_min_m:'A kuponhoz legalább {v} értékű rendelés kell.',cp_used_m:'Ezt a kupont már felhasználtad.',cp_login_m:'Ehhez a kuponhoz be kell lépned.',cp_have:'Már a kuponjaid között van.',
+ pf_save:'Mentés',pf_saved:'Mentve.',pf_deliv:'Alapértelmezett átvétel',pf_addr:'Alapértelmezett cím',pf_pass_t:'Jelszó módosítása',pf_old:'Jelenlegi jelszó',pf_new:'Új jelszó',pf_pass_bad:'A jelenlegi jelszó hibás.',pf_pass_ok:'A jelszó módosítva.',pf_email_taken:'Ez az e-mail cím már foglalt.'
+},
+en:{
+ nav_catalog:'Catalog',nav_materials:'Materials',nav_process:'How to order',nav_faq:'FAQ',cart:'Cart',
+ hero_eyebrow:'3D-PRINTED PRODUCTS · HUNGARY',hero_h1:'Ready-made objects, <em>layer by layer</em>.',
+ hero_p:'For the home, the desk, play and the workshop. Pick a material and colour; we print your piece after you order and have it ready for pick-up.',
+ hero_cta:'Catalog',f_products:'Products',f_mats:'Materials',f_layer:'Layer height',f_recv:'Receive',f_recv_v:'Tab · Siófok · parcel point · home',
+ play:'Play',pause:'Pause',layer:'layer',no_webgl:'3D preview is not available on this device.',details:'Details',
+ c_title:'Catalog',c_sub:'Ready-made models to choose from. Material and colour can also be set on the product page.',c_search:'Search the catalog',c_all:'All',c_none:'Nothing found.',c_add:'Add to cart',c_details:'Details',
+ md_material:'Material',md_color:'Colour',md_qty:'Quantity',md_size:'Size',md_lead:'Ready in',md_layer:'Layer',md_total:'Total',days:'working days',
+ m_title:'Materials',m_sub:'Heat resistance is approximate and depends on print settings.',m_name:'Material',m_strength:'Strength',m_heat:'Heat',m_flex:'Flexibility',m_use:'Good for',m_extra:'Surcharge',
+ mat_use:{PLA:'Decor, toys, anything that stays cool.',PETG:'Holders, mechanical parts, kitchen and outdoor use.',ABS:'Heat-tolerant, durable objects.',ASA:'Outdoor, UV-stable, parts exposed to sun.'},
+ pc_title:'How to order',
+ steps:[['Choose','Browse the catalog, inspect the 3D model, set material and colour.'],['Order','Add to cart, leave your contact and pick how you receive it. With an account you can track the order.'],['Print','We print it in your chosen material and check the finished piece.'],['Receive','Pick-up in Tab or Siófok, parcel point, or home delivery.']],
+ faq_title:'FAQ',
+ faq:[['How long does a product take?','Usually {a}–{b} working days from the order, depending on size and quantity. The confirmation gives the exact date.'],['Which material should I pick?','PLA is plenty for decor and toys. For loaded or warmer places use PETG, ABS or ASA; ASA for outdoors.'],['Will the colour match the preview?','The preview is indicative and filament shades vary slightly by maker. If the shade matters, say so in the comment.'],['Will layer lines be visible?','Yes, it is the nature of 3D printing. The catalog is printed at 0.2 mm layers.'],['How do I receive it?','In person in Tab or Siófok, at a parcel point, or by home delivery. The fee shows in the cart.'],['What is the account for?','Track your orders, reorder, keep coupons and save your details.']],
+ ft_note:'Prices in forints (HUF). Preview build: data is stored in this browser only.',
+ ct_title:'Cart',ct_empty:'Your cart is empty.',ct_remove:'Remove',ct_delivery:'Delivery',ct_total:'Total',ct_next:'Continue to checkout',
+ co_name:'Name',co_country:'Country',co_phone:'Phone',co_email:'Email (optional)',co_tg:'Telegram (optional)',co_addr:'Address or parcel point',co_note:'Comment',co_submit:'Place order',
+ e_name:'Enter your name.',e_phone:'Phone must have 9 digits.',e_email:'Invalid email address.',e_addr:'Enter an address or parcel point.',
+ co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'Preview build: the order never leaves this browser. A server-side receiver is needed for live use.',back:'Back',
+ co_sub:'Subtotal',co_disc:'Discount',co_fee:'Delivery',co_guest:'Create an account to track your orders.',co_login_hint:'Signed in: you can track this order in your account.',co_myacc:'Open my account',
+ col:{graphite:'Graphite',white:'White',orange:'Orange',blue:'Blue',green:'Green',red:'Red',grey:'Grey'},
+ acc_login:'Sign in',acc_my:'My account',acc_logout:'Sign out',acc_hello:'Hi',
+ au_login_t:'Sign in',au_reg_t:'Register',au_email:'Email',au_pass:'Password',au_name:'Name',au_phone:'Phone',au_enter:'Sign in',au_create:'Create account',
+ au_to_reg:'No account yet? Register',au_to_login:'Already have an account? Sign in',au_bad:'Wrong email or password.',au_exists:'An account with this email already exists.',au_pass_min:'Password must be at least 6 characters.',au_demo:'Preview build: accounts are stored in this browser only.',
+ acc_orders:'My orders',acc_coupons:'Coupons',acc_profile:'Details',
+ ord_none:'You have no orders yet.',ord_reorder:'Reorder',ord_items:'Items',ord_hist:'Status history',ord_cancelled:'This order was cancelled.',ord_shop:'Back to catalog',
+ st:{new:'New',confirmed:'Confirmed',printing:'Printing',ready:'Ready',done:'Collected',cancelled:'Cancelled'},
+ cp_title:'My coupons',cp_add_ph:'Coupon code',cp_add:'Add',cp_none:'No coupons yet. Enter a coupon code above.',cp_code:'Coupon code',cp_apply:'Apply',cp_remove:'Remove',cp_applied:'Coupon applied',
+ cp_off_pct:'−{v}% off the order',cp_off_fix:'−{v} Ft off the order',cp_min_s:'min. order {v}',cp_until_s:'valid until {v}',
+ cp_active:'Valid',cp_used:'Used',cp_expired:'Expired',cp_added:'Coupon added.',
+ cp_invalid:'Unknown or inactive coupon code.',cp_expired_m:'This coupon has expired.',cp_limit:'This coupon has run out.',cp_min_m:'This coupon needs an order of at least {v}.',cp_used_m:'You already used this coupon.',cp_login_m:'You need to sign in to use this coupon.',cp_have:'Already in your coupons.',
+ pf_save:'Save',pf_saved:'Saved.',pf_deliv:'Default delivery',pf_addr:'Default address',pf_pass_t:'Change password',pf_old:'Current password',pf_new:'New password',pf_pass_bad:'Current password is wrong.',pf_pass_ok:'Password changed.',pf_email_taken:'This email is already taken.'
+},
+ru:{
+ nav_catalog:'Каталог',nav_materials:'Материалы',nav_process:'Как заказать',nav_faq:'FAQ',cart:'Корзина',
+ hero_eyebrow:'3D-ПЕЧАТНЫЕ ТОВАРЫ · ВЕНГРИЯ',hero_h1:'Готовые вещи, <em>слой за слоем</em>.',
+ hero_p:'Для дома, стола, игр и мастерской. Выбери материал и цвет: после заказа мы напечатаем изделие и подготовим к выдаче.',
+ hero_cta:'Каталог',f_products:'Товаров',f_mats:'Материалы',f_layer:'Высота слоя',f_recv:'Получение',f_recv_v:'Таб · Шиофок · пункт выдачи · дом',
+ play:'Играть',pause:'Стоп',layer:'слой',no_webgl:'3D-просмотр на этом устройстве недоступен.',details:'Подробнее',
+ c_title:'Каталог',c_sub:'Готовые модели на выбор. Материал и цвет можно менять и на странице товара.',c_search:'Поиск по каталогу',c_all:'Все',c_none:'Ничего не найдено.',c_add:'В корзину',c_details:'Подробнее',
+ md_material:'Материал',md_color:'Цвет',md_qty:'Количество',md_size:'Размер',md_lead:'Готовность',md_layer:'Слой',md_total:'Итого',days:'раб. дн.',
+ m_title:'Материалы',m_sub:'Термостойкость приблизительная и зависит от настроек печати.',m_name:'Материал',m_strength:'Прочность',m_heat:'Нагрев',m_flex:'Гибкость',m_use:'Для чего',m_extra:'Наценка',
+ mat_use:{PLA:'Декор, игрушки, всё, что не греется.',PETG:'Держатели, механические детали, кухня и улица.',ABS:'Термостойкие прочные изделия.',ASA:'Улица, стойкость к UV, детали под солнцем.'},
+ pc_title:'Как заказать',
+ steps:[['Выбери','Листай каталог, смотри 3D-модель, задай материал и цвет.'],['Закажи','Добавь в корзину, оставь контакты и способ получения. С аккаунтом можно следить за заказом.'],['Печать','Печатаем выбранным материалом и проверяем готовое изделие.'],['Получение','Самовывоз в Табе или Шиофоке, пункт выдачи или доставка на дом.']],
+ faq_title:'Частые вопросы',
+ faq:[['Сколько делается товар?','Обычно {a}–{b} рабочих дня с момента заказа, в зависимости от размера и количества. Точную дату назовём в подтверждении.'],['Какой материал выбрать?','Для декора и игрушек хватит PLA. Для нагрузки и тепла берите PETG, ABS или ASA, для улицы ASA.'],['Цвет совпадёт с превью?','Превью ориентировочное, оттенок филамента слегка отличается у разных производителей. Если оттенок важен, напиши в комментарии.'],['Будут видны линии слоёв?','Да, это особенность 3D-печати. Каталог печатается слоем 0,2 мм.'],['Как получить заказ?','Лично в Табе или Шиофоке, в пункте выдачи или доставкой на дом. Стоимость видна в корзине.'],['Зачем нужен аккаунт?','Следить за заказами, повторять заказ, хранить купоны и свои данные.']],
+ ft_note:'Цены в форинтах (HUF). Демо-версия: данные хранятся только в этом браузере.',
+ ct_title:'Корзина',ct_empty:'Корзина пуста.',ct_remove:'Удалить',ct_delivery:'Получение',ct_total:'Итого',ct_next:'К оформлению',
+ co_name:'Имя',co_country:'Страна',co_phone:'Телефон',co_email:'Email (необязательно)',co_tg:'Telegram (необязательно)',co_addr:'Адрес или пункт выдачи',co_note:'Комментарий',co_submit:'Отправить заказ',
+ e_name:'Введи имя.',e_phone:'В номере должно быть 9 цифр.',e_email:'Некорректный email.',e_addr:'Укажи адрес или пункт выдачи.',
+ co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Демо-версия: заказ не покидает браузер. Для боевой работы нужен приём на сервере.',back:'Назад',
+ co_sub:'Сумма товаров',co_disc:'Скидка',co_fee:'Доставка',co_guest:'Создай аккаунт, чтобы следить за заказами.',co_login_hint:'Ты вошёл: заказ будет виден в кабинете.',co_myacc:'Открыть кабинет',
+ col:{graphite:'Графит',white:'Белый',orange:'Оранжевый',blue:'Синий',green:'Зелёный',red:'Красный',grey:'Серый'},
+ acc_login:'Войти',acc_my:'Кабинет',acc_logout:'Выйти',acc_hello:'Привет',
+ au_login_t:'Вход',au_reg_t:'Регистрация',au_email:'Email',au_pass:'Пароль',au_name:'Имя',au_phone:'Телефон',au_enter:'Войти',au_create:'Создать аккаунт',
+ au_to_reg:'Нет аккаунта? Регистрация',au_to_login:'Уже есть аккаунт? Войти',au_bad:'Неверный email или пароль.',au_exists:'Аккаунт с таким email уже есть.',au_pass_min:'Пароль минимум 6 символов.',au_demo:'Демо-версия: аккаунты хранятся только в этом браузере.',
+ acc_orders:'Мои заказы',acc_coupons:'Купоны',acc_profile:'Мои данные',
+ ord_none:'Заказов пока нет.',ord_reorder:'Повторить',ord_items:'Состав',ord_hist:'История статусов',ord_cancelled:'Заказ отменён.',ord_shop:'В каталог',
+ st:{new:'Новый',confirmed:'Подтверждён',printing:'Печатается',ready:'Готов к выдаче',done:'Получен',cancelled:'Отменён'},
+ cp_title:'Мои купоны',cp_add_ph:'Код купона',cp_add:'Добавить',cp_none:'Купонов пока нет. Введи код выше.',cp_code:'Код купона',cp_apply:'Применить',cp_remove:'Убрать',cp_applied:'Купон применён',
+ cp_off_pct:'−{v}% на заказ',cp_off_fix:'−{v} Ft на заказ',cp_min_s:'от {v}',cp_until_s:'до {v}',
+ cp_active:'Действует',cp_used:'Использован',cp_expired:'Истёк',cp_added:'Купон добавлен.',
+ cp_invalid:'Неизвестный или неактивный код.',cp_expired_m:'Срок купона истёк.',cp_limit:'Купон закончился.',cp_min_m:'Для купона нужен заказ от {v}.',cp_used_m:'Ты уже использовал этот купон.',cp_login_m:'Чтобы использовать купон, войди в аккаунт.',cp_have:'Этот купон уже у тебя.',
+ pf_save:'Сохранить',pf_saved:'Сохранено.',pf_deliv:'Получение по умолчанию',pf_addr:'Адрес по умолчанию',pf_pass_t:'Смена пароля',pf_old:'Текущий пароль',pf_new:'Новый пароль',pf_pass_bad:'Текущий пароль неверен.',pf_pass_ok:'Пароль изменён.',pf_email_taken:'Этот email уже занят.'
+}};
+
+/* ---------- i18n (admin) ---------- */
+const AT = {
+ru:{
+ login_t:'Вход для администратора',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Демо-доступ по умолчанию: admin / admin. Защита условная, данные лежат в браузере.',
+ title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
+ t_dash:'Обзор',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
+ ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
+ o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
+ p_shape:'Модель (3D-форма)',p_name:'Название',p_desc:'Описание',p_cat:'Категория',p_price:'Цена, Ft',p_active:'Показывать в каталоге',p_photo:'Фото для карточки (необязательно)',p_photo_rm:'Убрать фото',p_new:'Новый товар',p_name_req:'Заполни название хотя бы на одном языке.',p_price_req:'Укажи цену больше 0.',p_hidden:'скрыт',p_photo_big:'Фото слишком большое для хранилища браузера.',
+ c_new:'Новая категория',c_name:'Название',c_in_use:'В категории есть товары, удалить нельзя.',c_cnt:'Товаров',
+ u_name:'Имя',u_email:'Email',u_orders:'Заказы',u_reg:'Регистрация',u_reset:'Сменить пароль',u_newpass:'Новый пароль (мин. 6)',u_show:'Заказы',u_none:'Клиентов пока нет.',u_pass_min:'Минимум 6 символов.',
+ k_code:'Код',k_type:'Тип',k_pct:'Процент',k_fix:'Сумма, Ft',k_val:'Значение',k_min:'Мин. сумма заказа, Ft',k_exp:'Действует до',k_max:'Лимит использований (0 = без лимита)',k_once:'Один раз на клиента',k_grant:'Выдавать новым клиентам при регистрации',k_active:'Активен',k_used:'Использован',k_dup:'Такой код уже есть.',k_new:'Новый купон',k_bad:'Заполни код и значение.',k_on:'Вкл',k_off:'Выкл',
+ d_title:'Получение и доставка',d_name:'Название',d_fee:'Стоимость, Ft',d_on:'Включено',d_type:'Тип',d_pickup:'Самовывоз',d_point:'Пункт выдачи',d_home:'Доставка на дом',d_add:'Добавить пункт самовывоза',d_edit:'Способ получения',d_min1:'Должен остаться хотя бы один включённый способ.',
+ st_lead:'Срок изготовления (раб. дни)',st_from:'от',st_to:'до',st_cred:'Логин и пароль администратора',st_login:'Новый логин (мин. 3)',st_pass:'Новый пароль (мин. 6)',st_cred_bad:'Логин от 3, пароль от 6 символов.',
+ st_reset:'Сбросить демо-данные',st_reset_note:'Удалит все заказы, клиентов, купоны и изменения в каталоге и вернёт начальные данные.',st_lang:'Язык админки'
+},
+hu:{
+ login_t:'Adminisztrátori belépés',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Alapértelmezett demó hozzáférés: admin / admin. A védelem csak jelképes, az adatok a böngészőben vannak.',
+ title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
+ t_dash:'Áttekintés',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
+ ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
+ o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
+ p_shape:'Modell (3D forma)',p_name:'Név',p_desc:'Leírás',p_cat:'Kategória',p_price:'Ár, Ft',p_active:'Megjelenik a katalógusban',p_photo:'Fotó a kártyára (nem kötelező)',p_photo_rm:'Fotó törlése',p_new:'Új termék',p_name_req:'Adj meg nevet legalább egy nyelven.',p_price_req:'Adj meg 0-nál nagyobb árat.',p_hidden:'rejtett',p_photo_big:'A fotó túl nagy a böngésző tárolójához.',
+ c_new:'Új kategória',c_name:'Név',c_in_use:'A kategóriában vannak termékek, nem törölhető.',c_cnt:'Termék',
+ u_name:'Név',u_email:'E-mail',u_orders:'Rendelések',u_reg:'Regisztráció',u_reset:'Jelszócsere',u_newpass:'Új jelszó (min. 6)',u_show:'Rendelések',u_none:'Még nincs ügyfél.',u_pass_min:'Legalább 6 karakter.',
+ k_code:'Kód',k_type:'Típus',k_pct:'Százalék',k_fix:'Összeg, Ft',k_val:'Érték',k_min:'Min. rendelési érték, Ft',k_exp:'Érvényes eddig',k_max:'Felhasználási limit (0 = nincs)',k_once:'Ügyfelenként egyszer',k_grant:'Új ügyfeleknek regisztrációkor',k_active:'Aktív',k_used:'Felhasználva',k_dup:'Ilyen kód már van.',k_new:'Új kupon',k_bad:'Add meg a kódot és az értéket.',k_on:'Be',k_off:'Ki',
+ d_title:'Átvétel és szállítás',d_name:'Név',d_fee:'Díj, Ft',d_on:'Bekapcsolva',d_type:'Típus',d_pickup:'Személyes átvétel',d_point:'Csomagpont',d_home:'Házhoz szállítás',d_add:'Átvételi pont hozzáadása',d_edit:'Átvételi mód',d_min1:'Legalább egy módnak bekapcsolva kell maradnia.',
+ st_lead:'Elkészítési idő (munkanap)',st_from:'-tól',st_to:'-ig',st_cred:'Admin belépési adatok',st_login:'Új felhasználónév (min. 3)',st_pass:'Új jelszó (min. 6)',st_cred_bad:'Név min. 3, jelszó min. 6 karakter.',
+ st_reset:'Demó adatok visszaállítása',st_reset_note:'Töröl minden rendelést, ügyfelet, kupont és katalógus-módosítást, és visszaáll a kezdő állapot.',st_lang:'Admin nyelve'
+}};
+let alang = lsGet('pl_alang') === 'hu' ? 'hu' : 'ru';
+const a = k => (AT[alang][k] !== undefined ? AT[alang][k] : AT.ru[k] !== undefined ? AT.ru[k] : k);
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Math.round(n).toLocaleString('hu-HU') + ' Ft';
+let lang = lsGet('pl_lang'); if(!T[lang]) lang = 'hu';
+const t = k => (T[lang][k] !== undefined ? T[lang][k] : T.hu[k]);
+const L = (o, l) => o ? (o[l || lang] || o.hu || o.en || o.ru || '') : '';
+const matById = id => MATS.find(m => m.id === id) || MATS[0];
+const colHex = id => (COLORS.find(c => c.id === id) || COLORS[2]).hex;
+const unitPrice = (p, mat) => Math.round(p.price * matById(mat).mul);
+const dateStr = ts => new Date(ts).toLocaleString('hu-HU', {dateStyle:'short', timeStyle:'short'});
+const FLAG = {hu:'🇭🇺', ua:'🇺🇦'}, PRE = {hu:'+36', ua:'+380'};
+function mapPhone(v){
+  const d = v.replace(/\D/g, '').slice(0, 9);
+  if(d.length > 5) return d.slice(0,2) + ' ' + d.slice(2,5) + ' ' + d.slice(5);
+  if(d.length > 2) return d.slice(0,2) + ' ' + d.slice(2);
+  return d;
+}
+const phoneObj = (cc, text) => ({cc, digits:text.replace(/\D/g, ''), text:PRE[cc] + ' ' + text});
+const phoneHtml = ph => ph ? `${FLAG[ph.cc] || ''} <a href="tel:${PRE[ph.cc]}${esc(ph.digits)}">${esc(ph.text)}</a>` : '';
+function phoneField(p, ph){
+  const cc = ph ? ph.cc : 'hu', num = ph ? mapPhone(ph.digits) : '';
+  return `<span class="phone"><span style="display:grid;gap:8px;grid-column:1/-1;grid-template-columns:auto 1fr">
+    <select class="inp" id="${p}Cc" data-on="cc" data-p="${p}" style="width:auto"><option value="hu" ${cc === 'hu' ? 'selected' : ''}>🇭🇺 +36</option><option value="ua" ${cc === 'ua' ? 'selected' : ''}>🇺🇦 +380</option></select>
+    <input class="inp" id="${p}Num" data-on="mask" type="tel" inputmode="numeric" placeholder="${cc === 'hu' ? '20 123 4567' : '50 123 4567'}" value="${esc(num)}" autocomplete="tel-national"></span></span>`;
+}
+function readPhone(p){
+  const cc = $('#' + p + 'Cc').value, num = $('#' + p + 'Num').value;
+  return num.replace(/\D/g, '').length === 9 ? phoneObj(cc, num) : null;
+}
+
+/* ---------- pure logic ---------- */
+/*PURE-START*/
+function checkCoupon(list, ords, code, subtotal, user, now){
+  const c = list.find(x => x.code === String(code || '').trim().toUpperCase());
+  if(!c || !c.active) return {ok:false, key:'cp_invalid'};
+  if(c.expires && new Date(c.expires + 'T23:59:59') < (now || new Date())) return {ok:false, key:'cp_expired_m'};
+  if(c.maxUses && c.used >= c.maxUses) return {ok:false, key:'cp_limit'};
+  if(subtotal < c.min) return {ok:false, key:'cp_min_m', v:c.min};
+  if(c.oncePerUser){
+    if(!user) return {ok:false, key:'cp_login_m'};
+    if(ords.some(o => o.userId === user.id && o.coupon && o.coupon.code === c.code && o.status !== 'cancelled')) return {ok:false, key:'cp_used_m'};
+  }
+  const discount = c.type === 'percent' ? Math.round(subtotal * c.value / 100) : Math.min(subtotal, c.value);
+  return {ok:true, c, discount};
+}
+function orderTotals(items, discount, fee){
+  const subtotal = items.reduce((s, l) => s + l.unit * l.qty, 0);
+  return {subtotal, discount, fee, total:Math.max(0, subtotal - discount) + fee};
+}
+function couponState(c, user, ords, now){
+  if(!c || !c.active) return 'off';
+  if(c.expires && new Date(c.expires + 'T23:59:59') < (now || new Date())) return 'expired';
+  if(c.maxUses && c.used >= c.maxUses) return 'expired';
+  if(c.oncePerUser && user && ords.some(o => o.userId === user.id && o.coupon && o.coupon.code === c.code && o.status !== 'cancelled')) return 'used';
+  return 'active';
+}
+/*PURE-END*/
+
+/* ---------- geometry ---------- */
+/*GEO-START*/
+function lathe(pts, seg = 48){ return new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), seg); }
+function mesh(g, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0){ const o = new THREE.Mesh(g, m); o.position.set(x,y,z); o.rotation.set(rx,ry,rz); return o; }
+function gearShape(teeth, ro, ri, hole){
+  const s = new THREE.Shape(), n = teeth * 4;
+  for(let i = 0; i < n; i++){
+    const a = i / n * Math.PI * 2, k = i % 4, r = (k === 1 || k === 2) ? ro : ri;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r; i ? s.lineTo(x, y) : s.moveTo(x, y);
+  }
+  s.closePath();
+  const h = new THREE.Path(); h.absarc(0, 0, hole, 0, Math.PI * 2, true); s.holes.push(h);
+  return s;
+}
+const grp = (...c) => { const g = new THREE.Group(); c.forEach(x => g.add(x)); return g; };
+const BUILD = {
+  vase:m => { const pts = []; for(let i = 0; i <= 30; i++){ const z = i / 30 * 90; pts.push([i === 0 ? 0.01 : 22 + 9*Math.sin(z/90*Math.PI*2*1.4 + .6), z]); } return grp(mesh(lathe(pts, 24), m)); },
+  planter:m => grp(mesh(lathe([[0.01,0],[24,0],[34,46],[32,46],[22,3],[0.01,3]], 40), m)),
+  lamp:m => grp(mesh(lathe([[34,0],[34,2],[44,64],[40,120],[38,120],[42,64],[32,2],[32,0]], 40), m)),
+  stand:m => grp(mesh(new THREE.BoxGeometry(80, 6, 70), m, 0, 3, 0), mesh(new THREE.BoxGeometry(80, 70, 6), m, 0, 38, -22, -0.35, 0, 0), mesh(new THREE.BoxGeometry(80, 12, 6), m, 0, 12, 22)),
+  hook:m => grp(mesh(new THREE.BoxGeometry(45, 70, 6), m, 0, 35, -20), mesh(new THREE.TorusGeometry(15, 4, 14, 32, Math.PI), m, 0, 62, 0, Math.PI / 2, 0, 0), mesh(new THREE.CylinderGeometry(4, 4, 36, 20), m, 0, 62, -2, Math.PI / 2, 0, 0)),
+  clip:m => grp(mesh(new THREE.TorusGeometry(13, 4, 14, 32, Math.PI * 1.6), m, 0, 17, 0, 0, 0, Math.PI * 0.7), mesh(new THREE.BoxGeometry(40, 5, 24), m, 0, 2.5, 0)),
+  pencup:m => grp(mesh(lathe([[0.01,0],[34,0],[34,95],[31,95],[31,4],[0.01,4]], 40), m)),
+  knot:m => grp(mesh(new THREE.TorusKnotGeometry(20, 6.5, 160, 18), m, 0, 26, 0)),
+  pawn:m => grp(mesh(lathe([[0.01,0],[14,0],[14,4],[9,8],[5.5,12],[5,24],[9,28],[7,31],[8,33],[0.01,34]], 40), m), mesh(new THREE.SphereGeometry(8.5, 24, 16), m, 0, 41, 0)),
+  rook:m => grp(mesh(lathe([[0.01,0],[15,0],[15,4],[10,8],[8,12],[8,30],[13,34],[13,40],[0.01,40]], 40), m),
+    ...[[10,0],[-10,0],[0,10],[0,-10]].map(p => mesh(new THREE.BoxGeometry(6, 7, 6), m, p[0], 43.5, p[1]))),
+  gear:m => { const e = new THREE.ExtrudeGeometry(gearShape(16, 30, 25, 4), {depth:8, bevelEnabled:false}); e.rotateX(-Math.PI / 2); return grp(mesh(e, m)); },
+  spool:m => grp(mesh(lathe([[10,0],[26,0],[26,3],[10,3],[10,70],[26,70],[26,73],[10,73]], 40), m))
+};
+/*GEO-END*/
+const DIMS = {};
+function dimText(shape){
+  if(!BUILD[shape]) return '';
+  if(!DIMS[shape]){
+    const m = new THREE.MeshBasicMaterial(), o = BUILD[shape](m), s = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3());
+    o.traverse(x => { if(x.geometry) x.geometry.dispose(); }); m.dispose();
+    DIMS[shape] = [s.x, s.z, s.y].map(v => Math.round(v)).join(' × ') + ' mm';
+  }
+  return DIMS[shape];
+}
+
+/* ---------- shader + viewer ---------- */
+const VERT = `varying vec3 vN; varying float vY; varying vec3 vV;
+void main(){ vec4 w = modelMatrix * vec4(position,1.0); vY = w.y; vN = normalize(mat3(modelMatrix) * normal); vV = cameraPosition - w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const FRAG = `uniform vec3 uColor; uniform vec3 uAccent; uniform float uClip; uniform float uStep; uniform float uActive;
+varying vec3 vN; varying float vY; varying vec3 vV;
+void main(){
+  if(vY > uClip) discard;
+  vec3 n = normalize(vN); if(!gl_FrontFacing) n = -n;
+  float d = max(dot(n, normalize(vec3(0.4,0.9,0.5))),0.0)*0.75 + max(dot(n, normalize(vec3(-0.6,0.2,-0.4))),0.0)*0.25 + 0.3;
+  float f = fract(vY / uStep);
+  d *= mix(0.74, 1.0, smoothstep(0.0, 0.4, f));
+  vec3 c = uColor * d;
+  if(!gl_FrontFacing) c *= 0.5;
+  c += pow(1.0 - abs(dot(n, normalize(vV))), 3.0) * 0.12;
+  float edge = (1.0 - smoothstep(0.0, uStep * 1.6, uClip - vY)) * uActive;
+  c = mix(c, uAccent, edge * 0.9);
+  gl_FragColor = vec4(c, 1.0);
+}`;
+const hexVec = h => { const c = new THREE.Color(h); return new THREE.Vector3(c.r, c.g, c.b); };
+const accentHex = () => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#ff6a1a';
+function mkMat(hex){
+  return new THREE.ShaderMaterial({
+    vertexShader:VERT, fragmentShader:FRAG, side:THREE.DoubleSide,
+    uniforms:{uColor:{value:hexVec(hex)}, uAccent:{value:hexVec('#ff6a1a')}, uClip:{value:1e9}, uStep:{value:1.5}, uActive:{value:0}}
+  });
+}
+const VIEWERS = new Set();
+function viewerMarkup(top){
+  return `<div class="stage"><canvas aria-label="3D"></canvas><div class="novgl">${esc(t('no_webgl'))}</div><div class="stage-top">${top || ''}</div></div>
+  <div class="scrub"><button class="btn sm play"></button><input type="range" class="prog" min="0" max="1000" value="1000" aria-label="Layer"><span class="lay"></span></div>`;
+}
+function createViewer(host){
+  const v = {ok:false, progress:1, playing:false, H:1, layers:1, auto:!matchMedia('(prefers-reduced-motion: reduce)').matches,
+    theta:0.7, phi:0.95, radius:150, target:new THREE.Vector3(), mat:null, obj:null, visible:true, destroyed:false};
+  const stage = host.querySelector('.stage'), cv = host.querySelector('canvas');
+  const rng = host.querySelector('.prog'), play = host.querySelector('.play'), out = host.querySelector('.lay');
+  v.label = () => { play.textContent = v.playing ? '❚❚ ' + t('pause') : '▶ ' + t('play'); out.textContent = Math.round(v.progress * v.layers) + ' / ' + v.layers + ' ' + t('layer'); };
+  v.setProduct = v.setColor = v.refreshTheme = v.destroy = () => {};
+  v.label();
+  let renderer;
+  try{ renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true}); }
+  catch(e){ host.querySelector('.novgl').style.display = 'grid'; rng.disabled = true; play.disabled = true; return v; }
+  v.ok = true;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 4/3, 1, 3000);
+  const grid = new THREE.GridHelper(200, 10, 0x888899, 0x888899); grid.material.transparent = true; grid.material.opacity = .25; scene.add(grid);
+  const ro = new ResizeObserver(() => { const w = stage.clientWidth, h = stage.clientHeight; if(!w || !h) return; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); });
+  ro.observe(stage);
+  const io = new IntersectionObserver(es => { v.visible = es[0].isIntersecting; }); io.observe(stage);
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { drag = {x:e.clientX, y:e.clientY}; v.auto = false; try{ cv.setPointerCapture(e.pointerId); }catch(_){} });
+  cv.addEventListener('pointermove', e => { if(!drag) return; v.theta -= (e.clientX - drag.x) * 0.008; v.phi = Math.min(1.5, Math.max(0.12, v.phi - (e.clientY - drag.y) * 0.006)); drag = {x:e.clientX, y:e.clientY}; });
+  const end = () => { drag = null; }; cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  const apply = () => {
+    if(v.mat){
+      const u = v.mat.uniforms;
+      u.uClip.value = v.progress >= 1 ? 1e9 : v.progress * v.H;
+      u.uActive.value = v.progress >= 1 ? 0 : 1;
+      u.uStep.value = LAYER * Math.max(1, Math.ceil(v.layers / 90));
+    }
+    v.label();
+  };
+  rng.addEventListener('input', () => { v.progress = rng.value / 1000; v.playing = false; apply(); });
+  play.addEventListener('click', () => { if(v.playing) v.playing = false; else { if(v.progress >= 1) v.progress = 0; v.playing = true; v.auto = false; } apply(); });
+  v.setProduct = (shape, hex) => {
+    if(!BUILD[shape]) return;
+    if(v.obj){ scene.remove(v.obj); v.obj.traverse(x => { if(x.geometry) x.geometry.dispose(); }); }
+    if(v.mat) v.mat.dispose();
+    v.mat = mkMat(hex); v.mat.uniforms.uAccent.value = hexVec(accentHex());
+    const o = BUILD[shape](v.mat), b = new THREE.Box3().setFromObject(o), c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
+    o.position.set(-c.x, -b.min.y, -c.z); scene.add(o); v.obj = o;
+    v.H = s.y; v.layers = Math.max(1, Math.ceil(s.y / LAYER)); v.radius = Math.max(s.x, s.y, s.z) * 2.3 + 20; v.target.set(0, s.y / 2, 0);
+    v.progress = 1; v.playing = false; rng.value = 1000; apply();
+  };
+  v.setColor = hex => { if(v.mat) v.mat.uniforms.uColor.value = hexVec(hex); };
+  v.refreshTheme = () => { if(v.mat) v.mat.uniforms.uAccent.value = hexVec(accentHex()); };
+  v.destroy = () => { v.destroyed = true; VIEWERS.delete(v); ro.disconnect(); io.disconnect(); if(v.obj) v.obj.traverse(x => { if(x.geometry) x.geometry.dispose(); }); if(v.mat) v.mat.dispose(); renderer.dispose(); if(renderer.forceContextLoss) renderer.forceContextLoss(); };
+  let last = performance.now();
+  (function loop(now){
+    if(v.destroyed) return;
+    requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if(!v.visible || !v.obj) return;
+    if(v.playing){ v.progress = Math.min(1, v.progress + dt / 7); rng.value = Math.round(v.progress * 1000); if(v.progress >= 1) v.playing = false; apply(); }
+    if(v.auto) v.theta += dt * 0.35;
+    const r = v.radius, sp = Math.sin(v.phi), cp = Math.cos(v.phi);
+    cam.position.set(v.target.x + r*sp*Math.sin(v.theta), v.target.y + r*cp, v.target.z + r*sp*Math.cos(v.theta));
+    cam.lookAt(v.target); renderer.render(scene, cam);
+  })(performance.now());
+  VIEWERS.add(v);
+  return v;
+}
+let TR = null;
+function thumbRenderer(){
+  if(TR !== null) return TR;
+  try{ TR = new THREE.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); TR.setSize(480, 360, false); TR.setPixelRatio(1); }
+  catch(e){ TR = false; }
+  return TR;
+}
+const THUMBS = {};
+function thumbOf(shape, color){
+  const key = shape + '|' + color;
+  if(THUMBS[key] !== undefined) return THUMBS[key];
+  const r = thumbRenderer(); if(!r || !BUILD[shape]) return THUMBS[key] = '';
+  const hex = colHex(color), mat = mkMat(hex); mat.uniforms.uAccent.value = hexVec(hex);
+  const sc = new THREE.Scene(), obj = BUILD[shape](mat); sc.add(obj);
+  const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const cam = new THREE.PerspectiveCamera(30, 4/3, 1, 2000), d = Math.max(size.x, size.y, size.z) * 2.2 + 20;
+  cam.position.set(c.x + d*0.62, c.y + d*0.5, c.z + d*0.7); cam.lookAt(c);
+  r.setClearColor(0x000000, 0); r.render(sc, cam);
+  const url = r.domElement.toDataURL('image/png');
+  obj.traverse(o => { if(o.geometry) o.geometry.dispose(); }); mat.dispose();
+  return THUMBS[key] = url;
+}
+
+/* ---------- session ---------- */
+const curUser = () => { const id = DB.get('session', null); return id ? users().find(u => u.id === id) || null : null; };
+let adminOn = false; try { adminOn = sessionStorage.getItem('pl2_admin') === '1'; } catch(e){}
+const setAdmin = on => { adminOn = on; try { on ? sessionStorage.setItem('pl2_admin', '1') : sessionStorage.removeItem('pl2_admin'); } catch(e){} };
+function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); }
+
+/* ---------- dialogs ---------- */
+function openDlg(title, html, wide){ $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html; $('#dlgBox').classList.toggle('wide', !!wide); $('#dlgOv').hidden = false; const f = $('#dlgBody input,#dlgBody select,#dlgBody textarea'); if(f && !wide) try{ f.focus(); }catch(e){} }
+function closeDlg(){ $('#dlgOv').hidden = true; $('#dlgBody').innerHTML = ''; }
+const msg = (id, text, good) => { const el = $('#' + id); if(el){ el.textContent = text || ''; el.className = good ? 'ok' : 'err'; } };
+
+/* ---------- catalog ---------- */
+const PS = {};
+const ps = id => PS[id] || (PS[id] = {mat:'PLA', color:'orange'});
+let catFilter = 'all', query = '';
+function renderChips(){
+  if(catFilter !== 'all' && !cats().some(c => c.id === catFilter)) catFilter = 'all';
+  $('#catChips').innerHTML = [{id:'all'}, ...cats()].map(c => `<button class="opt" data-act="cat" data-cat="${esc(c.id)}" aria-pressed="${catFilter === c.id}">${esc(c.id === 'all' ? t('c_all') : L(c.name))}</button>`).join('');
+}
+function renderCatalog(){
+  const q = query.trim().toLowerCase(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
+  const list = activeProducts().filter(p => (catFilter === 'all' || p.cat === catFilter) && (!q || ['hu','en','ru'].some(l => (p.name[l] || '').toLowerCase().includes(q))));
+  $('#noRes').hidden = list.length > 0;
+  $('#products').innerHTML = list.map(p => {
+    const s = ps(p.id);
+    return `<article class="card" data-p="${esc(p.id)}">
+      <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" ${p.photo ? 'src="' + p.photo + '"' : ''}></button>
+      <div class="bd">
+        <div><div class="tagline">${esc(cmap[p.cat] ? L(cmap[p.cat].name) : '')}</div><h3>${esc(L(p.name))}</h3></div>
+        <div class="meta"><span class="small mono">${dimText(p.shape)}</span><span class="pr">${fmt(unitPrice(p, s.mat))}</span></div>
+        <div class="dots">${COLORS.map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(t('col')[c.id])}" title="${esc(t('col')[c.id])}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
+        <div class="btns"><button class="btn sm" data-act="open-prod" data-id="${esc(p.id)}">${esc(t('c_details'))}</button><button class="btn primary sm" data-act="card-add" data-id="${esc(p.id)}">${esc(t('c_add'))}</button></div>
+      </div></article>`;
+  }).join('');
+  list.forEach(paintThumb);
+}
+function paintThumb(p){
+  const img = $(`[data-p="${CSS.escape(p.id)}"] img`); if(!img || p.photo) return;
+  const url = thumbOf(p.shape, ps(p.id).color);
+  if(url) img.src = url; else img.style.visibility = 'hidden';
+}
+function renderMaterials(){
+  const bar = n => `<span class="bar" aria-label="${n}/5">${[1,2,3,4,5].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
+  $('#matTable').innerHTML = `<thead><tr><th>${t('m_name')}</th><th>${t('m_strength')}</th><th>${t('m_heat')}</th><th>${t('m_flex')}</th><th>${t('m_use')}</th><th>${t('m_extra')}</th></tr></thead><tbody>` +
+    MATS.map(m => `<tr><td class="nm">${m.id}</td><td>${bar(m.S)}</td><td>${bar(m.H)} <span class="small mono">~${m.temp}°C</span></td><td>${bar(m.F)}</td><td>${esc(t('mat_use')[m.id])}</td><td class="mono">${m.mul === 1 ? '–' : '+' + Math.round((m.mul - 1) * 100) + '%'}</td></tr>`).join('') + '</tbody>';
+}
+function renderStatic(){
+  const s = settings();
+  $('#steps').innerHTML = t('steps').map((x, i) => `<div class="step"><div class="layers" aria-hidden="true">${'<i></i>'.repeat(i + 1)}</div><div class="n">${i + 1} / 4</div><h3>${esc(x[0])}</h3><p>${esc(x[1])}</p></div>`).join('');
+  $('#faqList').innerHTML = t('faq').map((q, i) => `<details${i === 0 ? ' open' : ''}><summary>${esc(q[0])}</summary><p>${esc(q[1].replace('{a}', s.leadMin).replace('{b}', s.leadMax))}</p></details>`).join('');
+  $('#factCount').textContent = activeProducts().length;
+}
+
+/* ---------- hero ---------- */
+let HV = null;
+function heroProduct(){ return activeProducts()[0] || null; }
+function renderHeroChip(){
+  const p = heroProduct(), el = $('#heroTop'); if(!el) return;
+  $('#heroView').hidden = !p;
+  el.innerHTML = p ? `<span class="chip">${esc(L(p.name))} · ${fmt(p.price)}</span><button class="btn primary sm" data-act="open-prod" data-id="${esc(p.id)}">${esc(t('details'))}</button>` : '';
+}
+function syncHero(){
+  renderHeroChip();
+  const p = heroProduct();
+  if(HV && HV.ok && p) HV.setProduct(p.shape, '#ff6a1a');
+}
+function refreshShop(){ renderChips(); renderCatalog(); renderStatic(); syncHero(); cart = cart.filter(l => prod(l.pid)); saveCart(); }
+
+/* ---------- product modal ---------- */
+let M = null, MV = null;
+function openProduct(id){
+  const p = prod(id); if(!p) return;
+  const s = ps(id); M = {id, mat:s.mat, color:s.color, qty:1};
+  $('#prodOv').hidden = false;
+  $('#mView').innerHTML = viewerMarkup('');
+  if(MV) MV.destroy();
+  MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color));
+  renderModalInfo();
+}
+function closeProduct(){ if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
+function renderModalInfo(){
+  if(!M) return;
+  const p = prod(M.id); if(!p){ closeProduct(); return; }
+  const unit = unitPrice(p, M.mat), cat = cats().find(c => c.id === p.cat), st = settings();
+  $('#pCat').textContent = cat ? L(cat.name) : '';
+  $('#mInfo').innerHTML = `
+    <div><h2 id="pName">${esc(L(p.name))}</h2><p class="desc" style="margin-top:8px">${esc(L(p.desc))}</p></div>
+    <div><div class="lbl">${t('md_material')}</div><div class="chips">${MATS.map(m => `<button class="opt" data-act="m-mat" data-mat="${m.id}" aria-pressed="${M.mat === m.id}">${m.id}</button>`).join('')}</div></div>
+    <div><div class="lbl"><span>${t('md_color')}</span><span>${esc(t('col')[M.color])}</span></div><div class="dots">${COLORS.map(c => `<button class="dot" data-act="m-color" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(t('col')[c.id])}" aria-pressed="${M.color === c.id}"></button>`).join('')}</div></div>
+    <div class="row2"><div><div class="lbl">${t('md_qty')}</div><div class="num"><button data-act="m-qty" data-d="-1" aria-label="-">−</button><input id="mQty" data-on="mqty" value="${M.qty}" inputmode="numeric" aria-label="${t('md_qty')}"><button data-act="m-qty" data-d="1" aria-label="+">+</button></div></div></div>
+    <div class="kv"><div><span>${t('md_size')}</span><span class="mono">${dimText(p.shape)}</span></div><div><span>${t('md_layer')}</span><span class="mono">${String(LAYER).replace('.', ',')} mm</span></div><div><span>${t('md_lead')}</span><span class="mono">${st.leadMin}–${st.leadMax} ${t('days')}</span></div></div>
+    <div><div class="total"><span class="small">${t('md_total')}${M.qty > 1 ? ' · ' + fmt(unit) + ' × ' + M.qty : ''}</span><b>${fmt(unit * M.qty)}</b></div><button class="btn primary" data-act="m-add" style="width:100%">${t('c_add')}</button></div>`;
+  MV && MV.label();
+}
+
+/* ---------- cart ---------- */
+let cart = DB.get('cart', []); cart = Array.isArray(cart) ? cart : [];
+let delivery = '', cpCode = '', cpMsg = null, lastOrder = null;
+function saveCart(){ DB.set('cart', cart.map(l => ({pid:l.pid, mat:l.mat, color:l.color, qty:l.qty}))); $('#cartN').textContent = cart.reduce((n, l) => n + l.qty, 0); }
+function addLine(p, mat, color, qty){
+  const ex = cart.find(l => l.pid === p.id && l.mat === mat && l.color === color);
+  if(ex) ex.qty = Math.min(500, ex.qty + qty); else cart.push({pid:p.id, mat, color, qty});
+  saveCart(); openCart();
+}
+const cartItems = () => cart.map(l => { const p = prod(l.pid); return p ? {pid:l.pid, name:p.name, shape:p.shape, mat:l.mat, color:l.color, qty:l.qty, unit:unitPrice(p, l.mat)} : null; }).filter(Boolean);
+const enabledDeliveries = () => deliveries().filter(d => d.enabled);
+function curDelivery(){ const list = enabledDeliveries(); return list.find(d => d.id === delivery) || list[0] || null; }
+function cartCalc(){
+  const items = cartItems(), sub = items.reduce((s, l) => s + l.unit * l.qty, 0), d = curDelivery(), user = curUser();
+  let disc = 0, cp = null;
+  if(cpCode){ const r = checkCoupon(coupons(), orders(), cpCode, sub, user); if(r.ok){ disc = r.discount; cp = r.c; } else { cpMsg = {bad:true, key:r.key, v:r.v}; cpCode = ''; } }
+  return Object.assign({items, d, cp, user}, orderTotals(items, disc, d ? d.fee : 0));
+}
+const cpText = m => t(m.key).replace('{v}', m.v != null ? fmt(m.v) : '');
+function openCart(step){ $('#cartOv').hidden = false; renderCart(step || 'cart'); }
+function closeCart(){ $('#cartOv').hidden = true; }
+function renderCart(step){
+  const body = $('#cartBody');
+  if(step === 'done' && lastOrder){
+    body.innerHTML = `<h3 style="font-family:var(--font-body)">${t('co_done')}</h3>
+      <p class="small mono">${t('co_ref')}: <b style="color:var(--accent)">${esc(lastOrder.ref)}</b></p>
+      <pre class="sum" id="sumTxt"></pre><p class="small">${lastOrder.user ? t('co_login_hint') : t('co_guest')}</p><p class="small">${t('co_demo')}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="copy-sum">${t('co_copy')}</button>
+      ${lastOrder.user ? `<button class="btn" data-act="goto-acc">${t('co_myacc')}</button>` : `<button class="btn" data-act="au-reg">${t('au_create')}</button>`}
+      <button class="btn primary" data-act="close-cart">${t('co_close')}</button></div>`;
+    $('#sumTxt').textContent = lastOrder.text; return;
+  }
+  const c = cartCalc();
+  if(!c.items.length){ body.innerHTML = `<p class="small">${t('ct_empty')}</p>`; return; }
+  if(step === 'checkout'){ renderCheckout(c); return; }
+  const wallet = c.user ? (c.user.coupons || []) : [];
+  body.innerHTML = c.items.map((l, i) => `<div class="line">
+      <div class="t">${esc(L(l.name))}</div><div class="p">${fmt(l.unit * l.qty)}</div>
+      <div class="s">${esc([l.mat, t('col')[l.color], dimText(l.shape)].join(' · '))}</div>
+      <div class="a"><div class="num" style="width:110px"><button data-act="c-qty" data-i="${i}" data-d="-1" aria-label="-">−</button><input value="${l.qty}" readonly aria-label="qty"><button data-act="c-qty" data-i="${i}" data-d="1" aria-label="+">+</button></div><button class="link" data-act="c-rm" data-i="${i}">${t('ct_remove')}</button></div>
+    </div>`).join('') +
+    `<div class="lbl" style="margin-top:14px"><span>${t('ct_delivery')}</span></div>
+     <div class="rad">${enabledDeliveries().map(d => `<label><input type="radio" name="dl" data-on="dl" value="${esc(d.id)}" ${c.d && c.d.id === d.id ? 'checked' : ''}>${esc(L(d.name))}<span class="pp">${fmt(d.fee)}</span></label>`).join('')}</div>
+     <div class="lbl" style="margin-top:14px"><span>${t('cp_code')}</span></div>
+     ${c.cp ? `<div class="sumrow"><span>${esc(c.cp.code)} · ${t('cp_applied')}</span><span><button class="link" data-act="cp-clear">${t('cp_remove')}</button></span></div>` :
+       `<div class="cpbox"><input class="inp" id="cpIn" placeholder="${esc(t('cp_add_ph'))}" autocomplete="off" style="text-transform:uppercase"><button class="btn" data-act="cp-apply">${t('cp_apply')}</button></div>
+        ${wallet.length ? `<div class="chips" style="margin-top:8px">${wallet.map(w => `<button class="opt" data-act="cp-pick" data-code="${esc(w)}">${esc(w)}</button>`).join('')}</div>` : ''}`}
+     ${cpMsg ? `<p class="${cpMsg.bad ? 'err' : 'ok'}" style="margin-top:6px">${esc(cpMsg.text || cpText(cpMsg))}</p>` : ''}
+     <div style="margin-top:14px">
+       <div class="sumrow"><span>${t('co_sub')}</span><span class="mono">${fmt(c.subtotal)}</span></div>
+       ${c.discount ? `<div class="sumrow"><span>${t('co_disc')}</span><span class="mono">−${fmt(c.discount)}</span></div>` : ''}
+       <div class="sumrow"><span>${t('co_fee')}</span><span class="mono">${fmt(c.fee)}</span></div>
+     </div>
+     <div class="total"><span class="small">${t('ct_total')}</span><b>${fmt(c.total)}</b></div>
+     <button class="btn primary" data-act="to-checkout" style="width:100%">${t('ct_next')}</button>`;
+}
+function renderCheckout(c){
+  const u = c.user, need = c.d && c.d.type !== 'pickup';
+  $('#cartBody').innerHTML = `<form class="form" id="coForm" novalidate>
+    <label class="f">${t('co_name')}<input class="inp" id="coName" autocomplete="name" value="${esc(u ? u.name : '')}"><span class="err" id="eName"></span></label>
+    <label class="f">${t('co_phone')}${phoneField('co', u ? u.phone : null)}<span class="err" id="ePhone"></span></label>
+    <div class="row2">
+      <label class="f">${t('co_email')}<input class="inp" id="coMail" type="email" autocomplete="email" value="${esc(u ? u.email : '')}"><span class="err" id="eMail"></span></label>
+      <label class="f">${t('co_tg')}<input class="inp" id="coTg" placeholder="@username"></label>
+    </div>
+    ${need ? `<label class="f">${t('co_addr')}<input class="inp" id="coAddr" autocomplete="street-address" value="${esc(u && u.addr && u.addr.text ? u.addr.text : '')}"><span class="err" id="eAddr"></span></label>` : ''}
+    <label class="f">${t('co_note')}<textarea class="inp" id="coNote" rows="2"></textarea></label>
+    <div><div class="sumrow"><span>${esc(L(c.d.name))}</span><span class="mono">${fmt(c.fee)}</span></div>${c.discount ? `<div class="sumrow"><span>${esc(c.cp.code)}</span><span class="mono">−${fmt(c.discount)}</span></div>` : ''}</div>
+    <div class="total" style="margin:0"><span class="small">${t('ct_total')}</span><b>${fmt(c.total)}</b></div>
+    <div style="display:flex;gap:8px"><button type="button" class="btn" data-act="co-back">${t('back')}</button><button class="btn primary" style="flex:1">${t('co_submit')}</button></div>
+  </form>`;
+}
+function submitOrder(){
+  const c = cartCalc(), need = c.d && c.d.type !== 'pickup';
+  const name = $('#coName').value.trim(), ph = readPhone('co'), mail = $('#coMail').value.trim(), addr = need ? $('#coAddr').value.trim() : '';
+  $('#eName').textContent = name.length < 2 ? t('e_name') : '';
+  $('#ePhone').textContent = ph ? '' : t('e_phone');
+  $('#eMail').textContent = mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail) ? t('e_email') : '';
+  if(need) $('#eAddr').textContent = addr ? '' : t('e_addr');
+  if($('#coForm .err:not(:empty)') || !c.items.length) return;
+  const ref = 'PL-' + Date.now().toString(36).toUpperCase(), now = Date.now(), user = c.user;
+  const o = {ref, ts:now, userId:user ? user.id : null, name, phone:ph, mail, tg:$('#coTg').value.trim(), note:$('#coNote').value.trim(), addr,
+    delivery:{id:c.d.id, type:c.d.type, name:c.d.name, fee:c.fee}, items:c.items.map(l => ({pid:l.pid, name:l.name, mat:l.mat, color:l.color, qty:l.qty, unit:l.unit})),
+    subtotal:c.subtotal, discount:c.discount, coupon:c.cp ? {code:c.cp.code, discount:c.discount} : null, total:c.total,
+    status:'new', history:[{status:'new', ts:now}], inote:''};
+  const all = orders(); all.push(o); DB.set('orders', all);
+  if(c.cp){ const cl = coupons(); const x = cl.find(k => k.code === c.cp.code); if(x){ x.used = (x.used || 0) + 1; DB.set('coupons', cl); } }
+  if(user){ const ul = users(), x = ul.find(k => k.id === user.id); if(x){ x.addr = {delivery:c.d.id, text:addr || (x.addr && x.addr.text) || ''}; DB.set('users', ul); } }
+  const text = [ref, dateStr(now), '', ...o.items.map(l => `• ${L(l.name)} (${l.mat}, ${t('col')[l.color]}) × ${l.qty} — ${fmt(l.unit * l.qty)}`), '',
+    `${t('ct_delivery')}: ${L(c.d.name)} (${fmt(c.fee)})`, ...(c.cp ? [`${t('co_disc')}: ${c.cp.code} −${fmt(c.discount)}`] : []), `${t('ct_total')}: ${fmt(c.total)}`, '',
+    `${name} · ${ph.text}`, ...[mail, o.tg, addr, o.note].filter(Boolean)].join('\n');
+  lastOrder = {ref, text, user:!!user}; cart = []; cpCode = ''; cpMsg = null; saveCart(); renderCart('done');
+  if(!$('#viewAccount').hidden) renderAccount();
+}
+
+/* ---------- auth ---------- */
+let authMode = 'login';
+function authHTML(){
+  const reg = authMode === 'register';
+  return `<form class="form" id="auForm" novalidate>
+    ${reg ? `<label class="f">${t('au_name')}<input class="inp" id="auName" autocomplete="name"></label>` : ''}
+    <label class="f">${t('au_email')}<input class="inp" id="auEmail" type="email" autocomplete="email"></label>
+    ${reg ? `<label class="f">${t('au_phone')}${phoneField('au', null)}</label>` : ''}
+    <label class="f">${t('au_pass')}<input class="inp" id="auPass" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}"></label>
+    <p id="auErr" class="err"></p>
+    <button class="btn primary">${reg ? t('au_create') : t('au_enter')}</button>
+    <button type="button" class="link" data-act="${reg ? 'au-login' : 'au-reg'}">${reg ? t('au_to_login') : t('au_to_reg')}</button>
+    <p class="small">${t('au_demo')}</p></form>`;
+}
+function openAuth(mode){ authMode = mode || 'login'; openDlg(authMode === 'register' ? t('au_reg_t') : t('au_login_t'), authHTML()); }
+async function submitAuth(){
+  const email = $('#auEmail').value.trim().toLowerCase(), pass = $('#auPass').value;
+  if(authMode === 'login'){
+    const u = users().find(x => x.email === email);
+    if(!u || u.passHash !== await hash(pass)) return msg('auErr', t('au_bad'));
+    DB.set('session', u.id);
+  } else {
+    const name = $('#auName').value.trim(), ph = readPhone('au');
+    if(name.length < 2) return msg('auErr', t('e_name'));
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('auErr', t('e_email'));
+    if(!ph) return msg('auErr', t('e_phone'));
+    if(pass.length < 6) return msg('auErr', t('au_pass_min'));
+    if(users().some(x => x.email === email)) return msg('auErr', t('au_exists'));
+    const u = {id:uid(), name, email, phone:ph, passHash:await hash(pass), created:Date.now(), coupons:coupons().filter(k => k.grant && k.active).map(k => k.code), addr:{delivery:'', text:''}};
+    const ul = users(); ul.push(u); DB.set('users', ul); DB.set('session', u.id);
+  }
+  closeDlg(); accLabel();
+  if(!$('#cartOv').hidden) renderCart('cart');
+  if(wantAcc) { wantAcc = false; go('account'); }
+}
+let wantAcc = false;
+
+/* ---------- account ---------- */
+let accTab = 'orders';
+const accOrders = () => { const u = curUser(); return u ? orders().filter(o => o.userId === u.id).sort((x, y) => y.ts - x.ts) : []; };
+function cpDesc(c){
+  const parts = [c.type === 'percent' ? t('cp_off_pct').replace('{v}', c.value) : t('cp_off_fix').replace('{v}', fmt(c.value).replace(' Ft', ''))];
+  if(c.min) parts.push(t('cp_min_s').replace('{v}', fmt(c.min)));
+  if(c.expires) parts.push(t('cp_until_s').replace('{v}', c.expires));
+  return parts.join(' · ');
+}
+function renderAccount(){
+  const u = curUser(), box = $('#viewAccount');
+  if(!u){ box.innerHTML = ''; return; }
+  const tabs = [['orders', t('acc_orders')], ['coupons', t('acc_coupons')], ['profile', t('acc_profile')]];
+  let body = '';
+  if(accTab === 'orders'){
+    const list = accOrders();
+    body = list.length ? list.map(o => {
+      const idx = FLOW.indexOf(o.status);
+      return `<article class="ocard">
+        <div class="top2"><div><b class="mono" style="color:var(--accent)">${esc(o.ref)}</b> <span class="small">· ${dateStr(o.ts)}</span></div><span class="st ${o.status}">${esc(t('st')[o.status])}</span></div>
+        ${o.status === 'cancelled' ? `<p class="small">${t('ord_cancelled')}</p>` : `<ol class="stepper">${FLOW.map((s, i) => `<li class="${i <= idx ? 'on' : ''} ${i === idx ? 'cur' : ''}">${esc(t('st')[s])}</li>`).join('')}</ol>`}
+        <div class="kv">${o.items.map(l => `<div><span>${esc(L(l.name))} × ${l.qty}</span><span class="mono">${esc(l.mat)} · ${fmt(l.unit * l.qty)}</span></div>`).join('')}
+          <div><span>${esc(L(o.delivery.name))}</span><span class="mono">${fmt(o.delivery.fee)}</span></div>
+          ${o.coupon ? `<div><span>${esc(o.coupon.code)}</span><span class="mono">−${fmt(o.coupon.discount)}</span></div>` : ''}
+          <div><span><b>${t('ct_total')}</b></span><span class="mono"><b>${fmt(o.total)}</b></span></div></div>
+        <div class="rowbtns"><button class="btn sm" data-act="reorder" data-ref="${esc(o.ref)}">${t('ord_reorder')}</button></div>
+      </article>`;
+    }).join('') : `<p class="empty">${t('ord_none')} <a href="#catalog">${t('ord_shop')}</a></p>`;
+  } else if(accTab === 'coupons'){
+    const wallet = (u.coupons || []).map(code => coupons().find(c => c.code === code)).filter(Boolean);
+    body = `<form class="cpbox" id="cpAddForm" style="max-width:420px;margin-bottom:6px"><input class="inp" id="cpAddIn" placeholder="${esc(t('cp_add_ph'))}" autocomplete="off" style="text-transform:uppercase"><button class="btn primary">${t('cp_add')}</button></form>
+      <p id="cpAddMsg" class="err" style="margin-bottom:14px"></p>
+      <div class="cplist">${wallet.length ? wallet.map(c => { const s = couponState(c, u, orders()); return `<div class="coupon"><div><b>${esc(c.code)}</b><div class="small">${esc(cpDesc(c))}</div></div><span class="st ${s === 'off' ? 'expired' : s}">${esc(s === 'active' ? t('cp_active') : s === 'used' ? t('cp_used') : t('cp_expired'))}</span></div>`; }).join('') : `<p class="empty">${t('cp_none')}</p>`}</div>`;
+  } else {
+    const dl = deliveries();
+    body = `<form class="form" id="pfForm" style="max-width:520px" novalidate>
+      <label class="f">${t('au_name')}<input class="inp" id="pfName" value="${esc(u.name)}"></label>
+      <label class="f">${t('au_email')}<input class="inp" id="pfEmail" type="email" value="${esc(u.email)}"></label>
+      <label class="f">${t('au_phone')}${phoneField('pf', u.phone)}</label>
+      <label class="f">${t('pf_deliv')}<select class="inp" id="pfDel"><option value="">–</option>${dl.map(d => `<option value="${esc(d.id)}" ${u.addr && u.addr.delivery === d.id ? 'selected' : ''}>${esc(L(d.name))}</option>`).join('')}</select></label>
+      <label class="f">${t('pf_addr')}<input class="inp" id="pfAddr" value="${esc(u.addr ? u.addr.text : '')}"></label>
+      <p id="pfMsg" class="err"></p><button class="btn primary" style="justify-self:start">${t('pf_save')}</button></form>
+      <h2 class="sub">${t('pf_pass_t')}</h2>
+      <form class="form" id="pwForm" style="max-width:520px" novalidate>
+        <label class="f">${t('pf_old')}<input class="inp" id="pwOld" type="password" autocomplete="current-password"></label>
+        <label class="f">${t('pf_new')}<input class="inp" id="pwNew" type="password" autocomplete="new-password"></label>
+        <p id="pwMsg" class="err"></p><button class="btn" style="justify-self:start">${t('pf_save')}</button></form>`;
+  }
+  box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">${esc(t('acc_my'))}</div><h1>${esc(t('acc_hello'))}, ${esc(u.name.split(' ')[0])}</h1></div>
+    <button class="btn" data-act="logout">${t('acc_logout')}</button></div>
+    <div class="tabs">${tabs.map(x => `<button class="opt" data-act="acc-tab" data-tab="${x[0]}" aria-pressed="${accTab === x[0]}">${esc(x[1])}</button>`).join('')}</div>${body}</div>`;
+}
+
+/* ---------- admin ---------- */
+const adm = {tab:'dash', ordFilter:'all'};
+function openAdminLogin(){
+  openDlg(a('login_t'), `<form class="form" id="adLogin" novalidate>
+    <label class="f">${a('login')}<input class="inp" id="adUser" autocomplete="username"></label>
+    <label class="f">${a('pass')}<input class="inp" id="adPass" type="password" autocomplete="current-password"></label>
+    <p id="adErr" class="err"></p><button class="btn primary">${a('enter')}</button><p class="small">${a('demo')}</p></form>`);
+}
+const stName = (s, l) => T[l || alang === 'hu' ? 'hu' : 'ru'].st[s];
+const stL = s => T[alang].st[s];
+function admOrders(){ return orders().slice().sort((x, y) => y.ts - x.ts); }
+function ordRow(o){
+  return `<tr><td class="nm">${esc(o.ref)}</td><td class="small">${dateStr(o.ts)}</td><td>${esc(o.name)}</td><td>${phoneHtml(o.phone)}</td><td class="r mono">${fmt(o.total)}</td>
+    <td><select class="inp" data-on="ostatus" data-ref="${esc(o.ref)}" style="padding:5px 6px;font-size:13px;width:auto">${STATUSES.map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${esc(stL(s))}</option>`).join('')}</select></td>
+    <td><button class="btn sm" data-act="ord-open" data-ref="${esc(o.ref)}">${a('open')}</button></td></tr>`;
+}
+const ordHead = () => `<tr><th>${a('ref')}</th><th>${a('date')}</th><th>${a('cust')}</th><th>${a('phone')}</th><th class="r">${a('sum')}</th><th>${a('status')}</th><th></th></tr>`;
+function renderAdmin(){
+  const box = $('#viewAdmin'); if(!adminOn){ box.innerHTML = ''; return; }
+  const tabs = [['dash','t_dash'],['orders','t_orders'],['products','t_products'],['cats','t_cats'],['users','t_users'],['coupons','t_coupons'],['settings','t_settings']];
+  const ords = admOrders(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
+  let body = '';
+  if(adm.tab === 'dash'){
+    const rev = ords.filter(o => o.status !== 'cancelled').reduce((s, o) => s + o.total, 0);
+    body = `<div class="statgrid">
+      <div class="stat"><small>${a('s_new')}</small><b>${ords.filter(o => o.status === 'new').length}</b></div>
+      <div class="stat"><small>${a('s_rev')}</small><b>${fmt(rev)}</b></div>
+      <div class="stat"><small>${a('s_orders')}</small><b>${ords.length}</b></div>
+      <div class="stat"><small>${a('s_users')}</small><b>${users().length}</b></div>
+      <div class="stat"><small>${a('s_products')}</small><b>${products().length}</b></div></div>
+      <h2 class="sub" style="margin-top:0">${a('recent')}</h2>
+      ${ords.length ? `<div class="tablewrap"><table>${ordHead()}<tbody>${ords.slice(0, 8).map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`}`;
+  } else if(adm.tab === 'orders'){
+    const list = adm.ordFilter === 'all' ? ords : ords.filter(o => o.status === adm.ordFilter);
+    body = `<div class="chips" style="margin-bottom:14px">${['all', ...STATUSES].map(s => `<button class="opt" data-act="ord-filter" data-s="${s}" aria-pressed="${adm.ordFilter === s}">${esc(s === 'all' ? a('all') : stL(s))}${s === 'all' ? '' : ' ' + ords.filter(o => o.status === s).length}</button>`).join('')}</div>
+      ${list.length ? `<div class="tablewrap"><table>${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`}`;
+  } else if(adm.tab === 'products'){
+    body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="p-edit" data-id="">${a('add')}</button></div>
+      <div class="tablewrap"><table><thead><tr><th></th><th>${a('p_name')}</th><th>${a('p_cat')}</th><th class="r">${a('p_price')}</th><th></th></tr></thead><tbody>
+      ${products().map(p => { const th = p.photo || thumbOf(p.shape, 'orange'); return `<tr><td>${th ? `<img class="thumb" src="${th}" alt="">` : '<span class="thumb"></span>'}</td>
+        <td>${esc(L(p.name, alang))} ${p.active ? '' : `<span class="st off">${a('p_hidden')}</span>`}</td><td>${esc(cmap[p.cat] ? L(cmap[p.cat].name, alang) : '–')}</td><td class="r mono">${fmt(p.price)}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="p-edit" data-id="${esc(p.id)}">${a('edit')}</button><button class="btn sm danger" data-act="p-del" data-id="${esc(p.id)}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')}
+      </tbody></table></div>`;
+  } else if(adm.tab === 'cats'){
+    body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="c-edit" data-id="">${a('add')}</button></div>
+      <div class="tablewrap"><table><thead><tr><th>HU</th><th>EN</th><th>RU</th><th class="r">${a('c_cnt')}</th><th></th></tr></thead><tbody>
+      ${cats().map(c => `<tr><td>${esc(c.name.hu)}</td><td>${esc(c.name.en)}</td><td>${esc(c.name.ru)}</td><td class="r mono">${products().filter(p => p.cat === c.id).length}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="c-edit" data-id="${esc(c.id)}">${a('edit')}</button><button class="btn sm danger" data-act="c-del" data-id="${esc(c.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
+      </tbody></table></div><p id="catMsg" class="err" style="margin-top:8px"></p>`;
+  } else if(adm.tab === 'users'){
+    body = users().length ? `<div class="tablewrap"><table><thead><tr><th>${a('u_name')}</th><th>${a('u_email')}</th><th>${a('phone')}</th><th class="r">${a('u_orders')}</th><th>${a('u_reg')}</th><th></th></tr></thead><tbody>
+      ${users().map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${phoneHtml(u.phone)}</td><td class="r mono">${orders().filter(o => o.userId === u.id).length}</td><td class="small">${dateStr(u.created)}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="u-orders" data-id="${esc(u.id)}">${a('u_show')}</button><button class="btn sm" data-act="u-reset" data-id="${esc(u.id)}">${a('u_reset')}</button><button class="btn sm danger" data-act="u-del" data-id="${esc(u.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="empty">${a('u_none')}</p>`;
+  } else if(adm.tab === 'coupons'){
+    body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="k-edit" data-code="">${a('add')}</button></div>
+      <div class="tablewrap"><table><thead><tr><th>${a('k_code')}</th><th>${a('k_val')}</th><th class="r">${a('k_min')}</th><th>${a('k_exp')}</th><th class="r">${a('k_used')}</th><th>${a('k_active')}</th><th></th></tr></thead><tbody>
+      ${coupons().map(c => `<tr><td class="nm">${esc(c.code)}</td><td class="mono">${c.type === 'percent' ? c.value + '%' : fmt(c.value)}</td><td class="r mono">${c.min ? fmt(c.min) : '–'}</td><td class="small">${esc(c.expires || '–')}</td>
+        <td class="r mono">${c.used || 0}${c.maxUses ? ' / ' + c.maxUses : ''}</td><td><span class="st ${c.active ? 'active' : 'off'}">${c.active ? a('k_on') : a('k_off')}</span></td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="k-edit" data-code="${esc(c.code)}">${a('edit')}</button><button class="btn sm danger" data-act="k-del" data-code="${esc(c.code)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
+      </tbody></table></div>`;
+  } else {
+    const s = settings(), ad = DB.get('admin', {login:'admin'});
+    body = `<h2 class="sub" style="margin-top:0">${a('d_title')}</h2>
+      <div class="rowbtns" style="margin-bottom:12px"><button class="btn" data-act="d-edit" data-id="" data-type="pickup">${a('d_add')}</button></div>
+      <div class="tablewrap"><table style="min-width:560px"><thead><tr><th>${a('d_name')}</th><th>${a('d_type')}</th><th class="r">${a('d_fee')}</th><th>${a('d_on')}</th><th></th></tr></thead><tbody>
+      ${deliveries().map(d => `<tr><td>${esc(L(d.name, alang))}</td><td>${esc(a('d_' + d.type))}</td><td class="r mono">${fmt(d.fee)}</td><td><span class="st ${d.enabled ? 'active' : 'off'}">${d.enabled ? a('k_on') : a('k_off')}</span></td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="d-edit" data-id="${esc(d.id)}">${a('edit')}</button>${d.type === 'pickup' ? `<button class="btn sm danger" data-act="d-del" data-id="${esc(d.id)}" data-sure="1">${a('del')}</button>` : ''}</div></td></tr>`).join('')}
+      </tbody></table></div><p id="dMsg" class="err" style="margin-top:8px"></p>
+      <h2 class="sub">${a('st_lead')}</h2>
+      <form class="form" id="leadForm" style="max-width:360px"><div class="row2"><label class="f">${a('st_from')}<input class="inp" id="leadMin" type="number" min="0" value="${s.leadMin}"></label><label class="f">${a('st_to')}<input class="inp" id="leadMax" type="number" min="0" value="${s.leadMax}"></label></div>
+        <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
+      <h2 class="sub">${a('st_cred')}</h2>
+      <form class="form" id="credForm" style="max-width:360px"><label class="f">${a('st_login')}<input class="inp" id="crLogin" value="${esc(ad.login)}" autocomplete="username"></label>
+        <label class="f">${a('st_pass')}<input class="inp" id="crPass" type="password" autocomplete="new-password"></label>
+        <p id="crMsg" class="err"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
+      <h2 class="sub">${a('st_reset')}</h2><p class="small" style="margin-bottom:10px;max-width:560px">${a('st_reset_note')}</p>
+      <button class="btn danger" data-act="reset-demo" data-sure="1">${a('st_reset')}</button>`;
+  }
+  box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">3D Print Labs</div><h1>${a('title')}</h1></div>
+    <div class="rowbtns"><div class="seg" role="group" aria-label="Admin language"><button data-act="adm-lang" data-l="ru" aria-pressed="${alang === 'ru'}">RU</button><button data-act="adm-lang" data-l="hu" aria-pressed="${alang === 'hu'}">HU</button></div>
+    <a class="btn" href="#top">${a('toshop')}</a><button class="btn" data-act="adm-logout">${a('logout')}</button></div></div>
+    <div class="tabs">${tabs.map(x => `<button class="opt" data-act="adm-tab" data-tab="${x[0]}" aria-pressed="${adm.tab === x[0]}">${esc(a(x[1]))}</button>`).join('')}</div>${body}</div>`;
+}
+function ordDialog(ref){
+  const o = orders().find(x => x.ref === ref); if(!o) return;
+  const u = o.userId ? users().find(x => x.id === o.userId) : null;
+  openDlg(o.ref, `<div class="kv" style="margin-bottom:12px">
+      <div><span>${a('date')}</span><span class="mono">${dateStr(o.ts)}</span></div>
+      <div><span>${a('cust')}</span><span>${esc(o.name)} · ${u ? a('o_user') + ': ' + esc(u.email) : a('o_guest')}</span></div>
+      <div><span>${a('phone')}</span><span>${phoneHtml(o.phone)}</span></div>
+      ${o.mail ? `<div><span>E-mail</span><span><a href="mailto:${esc(o.mail)}">${esc(o.mail)}</a></span></div>` : ''}
+      ${o.tg ? `<div><span>Telegram</span><span>${esc(o.tg)}</span></div>` : ''}
+      <div><span>${a('o_deliv')}</span><span>${esc(L(o.delivery.name, alang))}${o.addr ? ' · ' + esc(o.addr) : ''}</span></div>
+      ${o.note ? `<div><span>${a('o_note')}</span><span>${esc(o.note)}</span></div>` : ''}</div>
+    <div class="lbl">${a('o_items')}</div>
+    <div class="kv" style="margin-bottom:12px">${o.items.map(l => `<div><span>${esc(L(l.name, alang))} × ${l.qty}</span><span class="mono">${esc(l.mat)} · ${esc(T.hu.col[l.color] || l.color)} · ${fmt(l.unit * l.qty)}</span></div>`).join('')}
+      <div><span>${a('o_sub')}</span><span class="mono">${fmt(o.subtotal)}</span></div>
+      ${o.coupon ? `<div><span>${a('o_coupon')} ${esc(o.coupon.code)}</span><span class="mono">−${fmt(o.coupon.discount)}</span></div>` : ''}
+      <div><span>${a('o_fee')}</span><span class="mono">${fmt(o.delivery.fee)}</span></div>
+      <div><span><b>${a('o_total')}</b></span><span class="mono"><b>${fmt(o.total)}</b></span></div></div>
+    <form class="form" id="ordForm" data-ref="${esc(o.ref)}">
+      <label class="f">${a('status')}<select class="inp" id="ordSt">${STATUSES.map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${esc(stL(s))}</option>`).join('')}</select></label>
+      <label class="f">${a('o_inote')}<textarea class="inp" id="ordNote" rows="2">${esc(o.inote || '')}</textarea></label>
+      <div class="lbl" style="margin:0">${a('o_hist')}</div>
+      <div class="kv">${o.history.map(h => `<div><span class="mono">${dateStr(h.ts)}</span><span>${esc(stL(h.status))}</span></div>`).join('')}</div>
+      <div class="rowbtns"><button class="btn primary">${a('save')}</button><button type="button" class="btn danger" data-act="ord-del" data-ref="${esc(o.ref)}" data-sure="1">${a('del')}</button></div></form>`, true);
+}
+function setOrderStatus(ref, status, inote){
+  const all = orders(), o = all.find(x => x.ref === ref); if(!o) return;
+  if(o.status !== status){ o.status = status; o.history.push({status, ts:Date.now()}); }
+  if(inote != null) o.inote = inote;
+  DB.set('orders', all);
+}
+function productDialog(id){
+  const p = id ? prod(id) : null, shapes = Object.keys(BUILD);
+  openDlg(p ? a('edit') : a('p_new'), `<form class="form" id="pForm" data-id="${esc(id || '')}" novalidate>
+    <label class="f">${a('p_shape')}<select class="inp" id="pfShape">${shapes.map(s => `<option value="${s}" ${p && p.shape === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
+    ${['hu','en','ru'].map(l => `<label class="f">${a('p_name')} ${l.toUpperCase()}<input class="inp" id="pfn_${l}" value="${esc(p ? p.name[l] : '')}"></label>`).join('')}
+    ${['hu','en','ru'].map(l => `<label class="f">${a('p_desc')} ${l.toUpperCase()}<textarea class="inp" id="pfd_${l}" rows="2">${esc(p ? p.desc[l] : '')}</textarea></label>`).join('')}
+    <div class="row2"><label class="f">${a('p_cat')}<select class="inp" id="pfCat">${cats().map(c => `<option value="${esc(c.id)}" ${p && p.cat === c.id ? 'selected' : ''}>${esc(L(c.name, alang))}</option>`).join('')}</select></label>
+    <label class="f">${a('p_price')}<input class="inp" id="pfPrice" type="number" min="1" value="${p ? p.price : ''}"></label></div>
+    <label class="ck"><input type="checkbox" id="pfActive" ${!p || p.active ? 'checked' : ''}> ${a('p_active')}</label>
+    <label class="f">${a('p_photo')}<input class="inp" id="pfPhoto" type="file" accept="image/*" data-on="photo"></label>
+    <div id="pfPrev">${p && p.photo ? `<img class="thumb" style="width:96px;height:72px" src="${p.photo}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>` : ''}</div>
+    <p id="pfErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`, true);
+  dlgPhoto = p ? p.photo : '';
+}
+let dlgPhoto = '';
+function readPhoto(file){
+  return new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => { const img = new Image(); img.onload = () => {
+      const k = Math.min(1, 640 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.82)); }; img.onerror = () => res(''); img.src = fr.result; };
+    fr.onerror = () => res(''); fr.readAsDataURL(file);
+  });
+}
+function catDialog(id){
+  const c = id ? cats().find(x => x.id === id) : null;
+  openDlg(c ? a('edit') : a('c_new'), `<form class="form" id="catForm" data-id="${esc(id || '')}" novalidate>
+    ${['hu','en','ru'].map(l => `<label class="f">${a('c_name')} ${l.toUpperCase()}<input class="inp" id="cn_${l}" value="${esc(c ? c.name[l] : '')}"></label>`).join('')}
+    <p id="cErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
+}
+function couponDialog(code){
+  const c = code ? coupons().find(x => x.code === code) : null;
+  openDlg(c ? a('edit') : a('k_new'), `<form class="form" id="kForm" data-code="${esc(code || '')}" novalidate>
+    <label class="f">${a('k_code')}<input class="inp" id="kCode" value="${esc(c ? c.code : '')}" style="text-transform:uppercase" ${c ? 'readonly' : ''}></label>
+    <div class="row2"><label class="f">${a('k_type')}<select class="inp" id="kType"><option value="percent" ${c && c.type === 'percent' ? 'selected' : ''}>${a('k_pct')}</option><option value="fixed" ${c && c.type === 'fixed' ? 'selected' : ''}>${a('k_fix')}</option></select></label>
+      <label class="f">${a('k_val')}<input class="inp" id="kVal" type="number" min="1" value="${c ? c.value : ''}"></label></div>
+    <div class="row2"><label class="f">${a('k_min')}<input class="inp" id="kMin" type="number" min="0" value="${c ? c.min : 0}"></label>
+      <label class="f">${a('k_exp')}<input class="inp" id="kExp" type="date" value="${esc(c ? c.expires : '')}"></label></div>
+    <label class="f">${a('k_max')}<input class="inp" id="kMax" type="number" min="0" value="${c ? c.maxUses : 0}"></label>
+    <label class="ck"><input type="checkbox" id="kOnce" ${!c || c.oncePerUser ? 'checked' : ''}> ${a('k_once')}</label>
+    <label class="ck"><input type="checkbox" id="kGrant" ${c && c.grant ? 'checked' : ''}> ${a('k_grant')}</label>
+    <label class="ck"><input type="checkbox" id="kActive" ${!c || c.active ? 'checked' : ''}> ${a('k_active')}</label>
+    <p id="kErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
+}
+function deliveryDialog(id, type){
+  const d = id ? deliveries().find(x => x.id === id) : null;
+  openDlg(a('d_edit'), `<form class="form" id="dForm" data-id="${esc(id || '')}" data-type="${esc(d ? d.type : type || 'pickup')}" novalidate>
+    ${['hu','en','ru'].map(l => `<label class="f">${a('d_name')} ${l.toUpperCase()}<input class="inp" id="dn_${l}" value="${esc(d ? d.name[l] : '')}"></label>`).join('')}
+    <label class="f">${a('d_fee')}<input class="inp" id="dFee" type="number" min="0" value="${d ? d.fee : 0}"></label>
+    <label class="ck"><input type="checkbox" id="dOn" ${!d || d.enabled ? 'checked' : ''}> ${a('d_on')}</label>
+    <p id="dErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
+}
+
+/* ---------- routing ---------- */
+function show(view){
+  $('#viewShop').hidden = view !== 'shop'; $('#viewAccount').hidden = view !== 'account'; $('#viewAdmin').hidden = view !== 'admin';
+  if(view === 'account') renderAccount(); if(view === 'admin') renderAdmin();
+}
+function route(){
+  const h = location.hash.replace('#', ''); let view = 'shop';
+  if(h === 'admin'){ if(adminOn) view = 'admin'; else openAdminLogin(); }
+  else if(h === 'account'){ if(curUser()) view = 'account'; else { wantAcc = true; openAuth('login'); } }
+  show(view);
+  if(view === 'shop' && h && h !== 'admin' && h !== 'account'){ const el = document.getElementById(h); if(el && el.scrollIntoView) el.scrollIntoView(); }
+  else if(view !== 'shop') window.scrollTo(0, 0);
+}
+function go(h){ if(location.hash === '#' + h) route(); else location.hash = h; }
+window.addEventListener('hashchange', route);
+
+/* ---------- actions ---------- */
+const ACT = {
+  'close-dlg':() => closeDlg(), 'close-cart':() => closeCart(), 'close-prod':() => closeProduct(),
+  'cat':el => { catFilter = el.dataset.cat; renderChips(); renderCatalog(); },
+  'open-prod':el => openProduct(el.dataset.id),
+  'card-color':el => { ps(el.dataset.id).color = el.dataset.color; renderCatalog(); },
+  'card-add':el => { const p = prod(el.dataset.id), s = ps(el.dataset.id); if(p) addLine(p, s.mat, s.color, 1); },
+  'm-mat':el => { M.mat = el.dataset.mat; ps(M.id).mat = M.mat; renderModalInfo(); renderCatalog(); },
+  'm-color':el => { M.color = el.dataset.color; ps(M.id).color = M.color; if(MV) MV.setColor(colHex(M.color)); renderModalInfo(); renderCatalog(); },
+  'm-qty':el => { M.qty = Math.min(500, Math.max(1, M.qty + +el.dataset.d)); renderModalInfo(); },
+  'm-add':() => { const p = prod(M.id); if(p){ addLine(p, M.mat, M.color, M.qty); closeProduct(); } },
+  'c-qty':el => { const l = cart[+el.dataset.i]; if(l){ l.qty = Math.max(1, Math.min(500, l.qty + +el.dataset.d)); saveCart(); renderCart('cart'); } },
+  'c-rm':el => { cart.splice(+el.dataset.i, 1); saveCart(); renderCart('cart'); },
+  'cp-apply':() => applyCoupon($('#cpIn').value),
+  'cp-pick':el => applyCoupon(el.dataset.code),
+  'cp-clear':() => { cpCode = ''; cpMsg = null; renderCart('cart'); },
+  'to-checkout':() => { cpMsg = null; renderCart('checkout'); },
+  'co-back':() => renderCart('cart'),
+  'copy-sum':async el => { try { await navigator.clipboard.writeText(lastOrder.text); el.textContent = t('co_copied'); } catch(e){ const r = document.createRange(); r.selectNodeContents($('#sumTxt')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } },
+  'goto-acc':() => { closeCart(); go('account'); },
+  'acc-open':() => { if(curUser()) go('account'); else { wantAcc = true; openAuth('login'); } },
+  'au-login':() => openAuth('login'), 'au-reg':() => { closeCart(); openAuth('register'); },
+  'logout':() => { DB.del('session'); accLabel(); go('top'); },
+  'acc-tab':el => { accTab = el.dataset.tab; renderAccount(); },
+  'reorder':el => { const o = orders().find(x => x.ref === el.dataset.ref); if(!o) return; o.items.forEach(l => { const p = prod(l.pid); if(p && p.active) addLineQuiet(p, l.mat, l.color, l.qty); }); saveCart(); openCart(); },
+  /* admin */
+  'adm-tab':el => { adm.tab = el.dataset.tab; renderAdmin(); },
+  'adm-lang':el => { alang = el.dataset.l; lsSet('pl_alang', alang); renderAdmin(); },
+  'adm-logout':() => { setAdmin(false); go('top'); },
+  'ord-filter':el => { adm.ordFilter = el.dataset.s; renderAdmin(); },
+  'ord-open':el => ordDialog(el.dataset.ref),
+  'ord-del':el => { DB.set('orders', orders().filter(o => o.ref !== el.dataset.ref)); closeDlg(); renderAdmin(); },
+  'p-edit':el => productDialog(el.dataset.id),
+  'p-del':el => { DB.set('products', products().filter(p => p.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
+  'p-photo-rm':() => { dlgPhoto = ''; $('#pfPrev').innerHTML = ''; },
+  'c-edit':el => catDialog(el.dataset.id),
+  'c-del':el => { if(products().some(p => p.cat === el.dataset.id)){ msg('catMsg', a('c_in_use')); return; } DB.set('cats', cats().filter(c => c.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
+  'u-orders':el => { const list = orders().filter(o => o.userId === el.dataset.id).sort((x, y) => y.ts - x.ts); const u = users().find(x => x.id === el.dataset.id); openDlg(u ? u.name : '', list.length ? `<div class="tablewrap"><table style="min-width:520px">${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`, true); },
+  'u-reset':el => openDlg(a('u_reset'), `<form class="form" id="uResetForm" data-id="${esc(el.dataset.id)}"><label class="f">${a('u_newpass')}<input class="inp" id="uNewPass" type="password" autocomplete="new-password"></label><p id="uErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`),
+  'u-del':el => { DB.set('users', users().filter(u => u.id !== el.dataset.id)); if(DB.get('session', null) === el.dataset.id) DB.del('session'); accLabel(); renderAdmin(); },
+  'k-edit':el => couponDialog(el.dataset.code),
+  'k-del':el => { DB.set('coupons', coupons().filter(c => c.code !== el.dataset.code)); renderAdmin(); },
+  'd-edit':el => deliveryDialog(el.dataset.id, el.dataset.type),
+  'd-del':el => { const rest = deliveries().filter(d => d.id !== el.dataset.id); if(!rest.some(d => d.enabled)){ msg('dMsg', a('d_min1')); return; } DB.set('delivery', rest); renderAdmin(); },
+  'reset-demo':async () => { DB.wipe(); cart = []; cpCode = ''; await seed(); PS_reset(); accLabel(); saveCart(); refreshShop(); adm.tab = 'dash'; renderAdmin(); }
+};
+function PS_reset(){ Object.keys(PS).forEach(k => delete PS[k]); }
+function addLineQuiet(p, mat, color, qty){ const ex = cart.find(l => l.pid === p.id && l.mat === mat && l.color === color); if(ex) ex.qty = Math.min(500, ex.qty + qty); else cart.push({pid:p.id, mat, color, qty}); }
+function applyCoupon(code){
+  code = String(code || '').trim().toUpperCase(); if(!code){ return; }
+  const c = cartCalc(), r = checkCoupon(coupons(), orders(), code, c.subtotal, c.user);
+  if(r.ok){ cpCode = code; cpMsg = {bad:false, text:t('cp_applied') + ': ' + code}; } else cpMsg = {bad:true, key:r.key, v:r.v};
+  renderCart('cart');
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if(el && ACT[el.dataset.act]){
+    if(el.dataset.sure && !el._armed){ el._armed = true; el._label = el.textContent; el.textContent = a('sure'); setTimeout(() => { el._armed = false; if(el.isConnected) el.textContent = el._label; }, 3000); return; }
+    ACT[el.dataset.act](el, e); return;
+  }
+  if(e.target === $('#cartOv')) closeCart();
+  if(e.target === $('#prodOv')) closeProduct();
+  if(e.target === $('#dlgOv')) closeDlg();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ if(!$('#dlgOv').hidden) closeDlg(); else if(!$('#cartOv').hidden) closeCart(); else closeProduct(); } });
+const INP = {
+  cc:el => { const p = el.dataset.p; $('#' + p + 'Num').placeholder = el.value === 'hu' ? '20 123 4567' : '50 123 4567'; $('#' + p + 'Num').value = ''; },
+  mask:el => { el.value = mapPhone(el.value); },
+  dl:el => { delivery = el.value; renderCart('cart'); },
+  mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
+  ostatus:el => { setOrderStatus(el.dataset.ref, el.value); renderAdmin(); },
+  photo:async el => { const f = el.files[0]; if(!f) return; const url = await readPhoto(f); if(url){ dlgPhoto = url; $('#pfPrev').innerHTML = `<img class="thumb" style="width:96px;height:72px" src="${url}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>`; } }
+};
+['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
+  const on = e.target.dataset && e.target.dataset.on; if(!on || !INP[on]) return;
+  const isText = e.target.tagName === 'INPUT' && (e.target.type === 'tel' || e.target.type === 'text');
+  if(ev === 'input' && !isText) return; if(ev === 'change' && isText && on === 'mask') return;
+  INP[on](e.target);
+}));
+const FORMS = {
+  coForm:() => submitOrder(),
+  auForm:() => submitAuth(),
+  adLogin:async () => {
+    const ad = DB.get('admin', null);
+    if(ad && $('#adUser').value.trim() === ad.login && ad.hash === await hash($('#adPass').value)){ setAdmin(true); closeDlg(); go('admin'); }
+    else msg('adErr', a('bad'));
+  },
+  cpAddForm:() => {
+    const u = curUser(), code = $('#cpAddIn').value.trim().toUpperCase(); if(!u || !code) return;
+    const c = coupons().find(x => x.code === code);
+    if(!c || !c.active) return msg('cpAddMsg', t('cp_invalid'));
+    if((u.coupons || []).includes(code)) return msg('cpAddMsg', t('cp_have'));
+    const ul = users(), x = ul.find(k => k.id === u.id); x.coupons = [...(x.coupons || []), code]; DB.set('users', ul);
+    renderAccount(); msg('cpAddMsg', t('cp_added'), true);
+  },
+  pfForm:() => {
+    const u = curUser(); if(!u) return;
+    const name = $('#pfName').value.trim(), email = $('#pfEmail').value.trim().toLowerCase(), ph = readPhone('pf');
+    if(name.length < 2) return msg('pfMsg', t('e_name'));
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('pfMsg', t('e_email'));
+    if(!ph) return msg('pfMsg', t('e_phone'));
+    if(users().some(x => x.email === email && x.id !== u.id)) return msg('pfMsg', t('pf_email_taken'));
+    const ul = users(), x = ul.find(k => k.id === u.id); Object.assign(x, {name, email, phone:ph, addr:{delivery:$('#pfDel').value, text:$('#pfAddr').value.trim()}}); DB.set('users', ul);
+    accLabel(); msg('pfMsg', t('pf_saved'), true);
+  },
+  pwForm:async () => {
+    const u = curUser(); if(!u) return;
+    if(u.passHash !== await hash($('#pwOld').value)) return msg('pwMsg', t('pf_pass_bad'));
+    if($('#pwNew').value.length < 6) return msg('pwMsg', t('au_pass_min'));
+    const ul = users(), x = ul.find(k => k.id === u.id); x.passHash = await hash($('#pwNew').value); DB.set('users', ul);
+    $('#pwOld').value = ''; $('#pwNew').value = ''; msg('pwMsg', t('pf_pass_ok'), true);
+  },
+  ordForm:e => { setOrderStatus(e.target.dataset.ref, $('#ordSt').value, $('#ordNote').value.trim()); closeDlg(); renderAdmin(); },
+  pForm:e => {
+    const id = e.target.dataset.id, name = {}, desc = {};
+    ['hu','en','ru'].forEach(l => { name[l] = $('#pfn_' + l).value.trim(); desc[l] = $('#pfd_' + l).value.trim(); });
+    const fb = name.hu || name.en || name.ru; if(!fb) return msg('pfErr', a('p_name_req'));
+    ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; if(!desc[l]) desc[l] = desc.hu || desc.en || desc.ru || ''; });
+    const price = parseInt($('#pfPrice').value, 10); if(!(price > 0)) return msg('pfErr', a('p_price_req'));
+    const data = {shape:$('#pfShape').value, cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
+    const list = products();
+    if(id){ const p = list.find(x => x.id === id); if(p) Object.assign(p, data); } else list.push(Object.assign({id:'p' + uid()}, data));
+    if(!DB.set('products', list)) return msg('pfErr', a('p_photo_big'));
+    closeDlg(); refreshShop(); renderAdmin();
+  },
+  catForm:e => {
+    const id = e.target.dataset.id, name = {};
+    ['hu','en','ru'].forEach(l => name[l] = $('#cn_' + l).value.trim());
+    const fb = name.hu || name.en || name.ru; if(!fb) return msg('cErr', a('p_name_req'));
+    ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
+    const list = cats();
+    if(id){ const c = list.find(x => x.id === id); if(c) c.name = name; } else list.push({id:'c' + uid(), name});
+    DB.set('cats', list); closeDlg(); refreshShop(); renderAdmin();
+  },
+  uResetForm:async e => {
+    const pw = $('#uNewPass').value; if(pw.length < 6) return msg('uErr', a('u_pass_min'));
+    const ul = users(), u = ul.find(x => x.id === e.target.dataset.id); if(u){ u.passHash = await hash(pw); DB.set('users', ul); }
+    closeDlg();
+  },
+  kForm:e => {
+    const old = e.target.dataset.code, code = $('#kCode').value.trim().toUpperCase(), value = parseInt($('#kVal').value, 10);
+    if(!code || !(value > 0)) return msg('kErr', a('k_bad'));
+    const list = coupons();
+    if(!old && list.some(c => c.code === code)) return msg('kErr', a('k_dup'));
+    const data = {code, type:$('#kType').value, value, min:parseInt($('#kMin').value, 10) || 0, expires:$('#kExp').value || '', maxUses:parseInt($('#kMax').value, 10) || 0,
+      oncePerUser:$('#kOnce').checked, grant:$('#kGrant').checked, active:$('#kActive').checked};
+    if(old){ const c = list.find(x => x.code === old); if(c) Object.assign(c, data); } else list.push(Object.assign({used:0}, data));
+    DB.set('coupons', list); closeDlg(); renderAdmin();
+  },
+  dForm:e => {
+    const id = e.target.dataset.id, name = {};
+    ['hu','en','ru'].forEach(l => name[l] = $('#dn_' + l).value.trim());
+    const fb = name.hu || name.en || name.ru; if(!fb) return msg('dErr', a('p_name_req'));
+    ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
+    const list = deliveries(), fee = Math.max(0, parseInt($('#dFee').value, 10) || 0), enabled = $('#dOn').checked;
+    if(id){ const d = list.find(x => x.id === id); if(d) Object.assign(d, {name, fee, enabled}); } else list.push({id:'d' + uid(), type:e.target.dataset.type, name, fee, enabled});
+    if(!list.some(d => d.enabled)) return msg('dErr', a('d_min1'));
+    DB.set('delivery', list); closeDlg(); renderAdmin(); if(!$('#cartOv').hidden) renderCart('cart');
+  },
+  leadForm:() => {
+    const mn = Math.max(0, parseInt($('#leadMin').value, 10) || 0), mx = Math.max(mn, parseInt($('#leadMax').value, 10) || 0);
+    DB.set('settings', Object.assign(settings(), {leadMin:mn, leadMax:mx})); renderStatic(); msg('leadMsg', a('saved'), true);
+  },
+  credForm:async () => {
+    const login = $('#crLogin').value.trim(), pass = $('#crPass').value;
+    if(login.length < 3 || pass.length < 6) return msg('crMsg', a('st_cred_bad'));
+    DB.set('admin', {login, hash:await hash(pass)}); $('#crPass').value = ''; msg('crMsg', a('saved'), true);
+  }
+};
+document.addEventListener('submit', e => { e.preventDefault(); const f = FORMS[e.target.id]; if(f) f(e); });
+
+/* ---------- language / theme / boot ---------- */
+function applyLang(){
+  document.documentElement.lang = lang;
+  $$('[data-i18n]').forEach(el => el.textContent = t(el.dataset.i18n));
+  $$('[data-i18n-html]').forEach(el => el.innerHTML = t(el.dataset.i18nHtml));
+  $$('[data-i18n-ph]').forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  $$('#langSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === lang));
+  renderChips(); renderCatalog(); renderMaterials(); renderStatic(); renderHeroChip(); accLabel();
+  $$('.novgl').forEach(n => n.textContent = t('no_webgl'));
+  VIEWERS.forEach(v => v.label());
+  if(M) renderModalInfo();
+  if(!$('#cartOv').hidden) renderCart('cart');
+  if(!$('#viewAccount').hidden) renderAccount();
+}
+function applyTheme(th){
+  if(th) document.documentElement.setAttribute('data-theme', th); else document.documentElement.removeAttribute('data-theme');
+  requestAnimationFrame(() => VIEWERS.forEach(v => v.refreshTheme()));
+}
+$('#themeBtn').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  const next = cur === 'dark' ? 'light' : 'dark'; lsSet('pl_theme', next); applyTheme(next);
+});
+$('#langSeg').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if(!b) return; lang = b.dataset.lang; lsSet('pl_lang', lang); applyLang(); });
+$('#cartBtn').addEventListener('click', () => openCart());
+
+(async function boot(){
+  const th = lsGet('pl_theme'); if(th === 'light' || th === 'dark') applyTheme(th);
+  await seed();
+  cart = DB.get('cart', []); cart = Array.isArray(cart) ? cart.filter(l => l && prod(l.pid)) : [];
+  $('#heroView').innerHTML = viewerMarkup('<span id="heroTopWrap" style="display:contents"></span>');
+  $('#heroTopWrap').id = 'heroTop';
+  saveCart(); applyLang();
+  HV = createViewer($('#heroView'));
+  const hp = heroProduct(); if(hp) HV.setProduct(hp.shape, '#ff6a1a');
+  route();
+})();
+</script>
