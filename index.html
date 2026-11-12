@@ -1,4 +1,4 @@
-<title>3D Print Labs</title>
+<title>TOFA3D Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -244,7 +244,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 
 <div class="wrap">
 <header class="top"><div class="top-in">
-  <a class="logo" href="#top" aria-label="3D Print Labs"><i>3D</i><span>PRINT LABS</span></a>
+  <a class="logo" href="#top" aria-label="TOFA3D Studio"><i>TOFA</i><span>3D STUDIO</span></a>
   <nav class="main" aria-label="Main">
     <a href="#catalog" data-i18n="nav_catalog"></a><a href="#materials" data-i18n="nav_materials"></a>
     <a href="#process" data-i18n="nav_process"></a><a href="#faq" data-i18n="nav_faq"></a>
@@ -308,7 +308,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 <main class="view" id="viewAdmin" hidden></main>
 
 <footer class="ft">
-  <span>© 3D Print Labs · www.3d-print-labs.com · @3dprintlabs</span>
+  <span>© TOFA3D Studio · www.3d-print-labs.com · @3dprintlabs</span>
   <span><span data-i18n="ft_note"></span> · <a href="#admin" id="adminLink">Admin</a></span>
 </footer>
 </div>
@@ -1181,7 +1181,7 @@ function renderAdmin(){
       <h2 class="sub">${a('st_reset')}</h2><p class="small" style="margin-bottom:10px;max-width:560px">${a('st_reset_note')}</p>
       <button class="btn danger" data-act="reset-demo" data-sure="1">${a('st_reset')}</button>`;
   }
-  box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">3D Print Labs</div><h1>${a('title')}</h1></div>
+  box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">TOFA3D Studio</div><h1>${a('title')}</h1></div>
     <div class="rowbtns"><div class="seg" role="group" aria-label="Admin language"><button data-act="adm-lang" data-l="ru" aria-pressed="${alang === 'ru'}">RU</button><button data-act="adm-lang" data-l="hu" aria-pressed="${alang === 'hu'}">HU</button></div>
     <a class="btn" href="#top">${a('toshop')}</a><button class="btn" data-act="adm-logout">${a('logout')}</button></div></div>
     <div class="tabs">${tabs.map(x => `<button class="opt" data-act="adm-tab" data-tab="${x[0]}" aria-pressed="${adm.tab === x[0]}">${esc(a(x[1]))}</button>`).join('')}</div>${body}</div>`;
