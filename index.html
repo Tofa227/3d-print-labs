@@ -514,7 +514,7 @@ ru:{
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
- p_shape:'Модель (3D-форма)',p_name:'Название',p_desc:'Описание',p_cat:'Категория',p_price:'Цена, Ft',p_active:'Показывать в каталоге',p_photo:'Фото для карточки (необязательно)',p_photo_rm:'Убрать фото',p_new:'Новый товар',p_name_req:'Заполни название хотя бы на одном языке.',p_price_req:'Укажи цену больше 0.',p_hidden:'скрыт',p_photo_big:'Фото слишком большое для хранилища браузера.',
+ p_shape:'Модель (3D-форма)',p_name:'Название',p_desc:'Описание',p_cat:'Категория',p_price:'Цена, Ft',p_active:'Показывать в каталоге',p_photo:'Фото товара',p_photo_rm:'Убрать фото',p_new:'Новый товар',p_name_req:'Заполни название хотя бы на одном языке.',p_price_req:'Укажи цену больше 0.',p_hidden:'скрыт',p_photo_big:'Фото слишком большое для хранилища браузера.',
  c_new:'Новая категория',c_name:'Название',c_in_use:'В категории есть товары, удалить нельзя.',c_cnt:'Товаров',
  u_name:'Имя',u_email:'Email',u_orders:'Заказы',u_reg:'Регистрация',u_reset:'Сменить пароль',u_newpass:'Новый пароль (мин. 6)',u_show:'Заказы',u_none:'Клиентов пока нет.',u_pass_min:'Минимум 6 символов.',
  k_code:'Код',k_type:'Тип',k_pct:'Процент',k_fix:'Сумма, Ft',k_val:'Значение',k_min:'Мин. сумма заказа, Ft',k_exp:'Действует до',k_max:'Лимит использований (0 = без лимита)',k_once:'Один раз на клиента',k_grant:'Выдавать новым клиентам при регистрации',k_active:'Активен',k_used:'Использован',k_dup:'Такой код уже есть.',k_new:'Новый купон',k_bad:'Заполни код и значение.',k_on:'Вкл',k_off:'Выкл',
@@ -529,7 +529,7 @@ hu:{
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
- p_shape:'Modell (3D forma)',p_name:'Név',p_desc:'Leírás',p_cat:'Kategória',p_price:'Ár, Ft',p_active:'Megjelenik a katalógusban',p_photo:'Fotó a kártyára (nem kötelező)',p_photo_rm:'Fotó törlése',p_new:'Új termék',p_name_req:'Adj meg nevet legalább egy nyelven.',p_price_req:'Adj meg 0-nál nagyobb árat.',p_hidden:'rejtett',p_photo_big:'A fotó túl nagy a böngésző tárolójához.',
+ p_shape:'Modell (3D forma)',p_name:'Név',p_desc:'Leírás',p_cat:'Kategória',p_price:'Ár, Ft',p_active:'Megjelenik a katalógusban',p_photo:'Termékfotó',p_photo_rm:'Fotó törlése',p_new:'Új termék',p_name_req:'Adj meg nevet legalább egy nyelven.',p_price_req:'Adj meg 0-nál nagyobb árat.',p_hidden:'rejtett',p_photo_big:'A fotó túl nagy a böngésző tárolójához.',
  c_new:'Új kategória',c_name:'Név',c_in_use:'A kategóriában vannak termékek, nem törölhető.',c_cnt:'Termék',
  u_name:'Név',u_email:'E-mail',u_orders:'Rendelések',u_reg:'Regisztráció',u_reset:'Jelszócsere',u_newpass:'Új jelszó (min. 6)',u_show:'Rendelések',u_none:'Még nincs ügyfél.',u_pass_min:'Legalább 6 karakter.',
  k_code:'Kód',k_type:'Típus',k_pct:'Százalék',k_fix:'Összeg, Ft',k_val:'Érték',k_min:'Min. rendelési érték, Ft',k_exp:'Érvényes eddig',k_max:'Felhasználási limit (0 = nincs)',k_once:'Ügyfelenként egyszer',k_grant:'Új ügyfeleknek regisztrációkor',k_active:'Aktív',k_used:'Felhasználva',k_dup:'Ilyen kód már van.',k_new:'Új kupon',k_bad:'Add meg a kódot és az értéket.',k_on:'Be',k_off:'Ki',
@@ -811,7 +811,7 @@ function renderStatic(){
 
 /* ---------- hero ---------- */
 let HV = null;
-function heroProduct(){ return activeProducts()[0] || null; }
+function heroProduct(){ return activeProducts().find(p => BUILD[p.shape]) || null; }
 function renderHeroChip(){
   const p = heroProduct(), el = $('#heroTop'); if(!el) return;
   $('#heroView').hidden = !p;
@@ -830,9 +830,9 @@ function openProduct(id){
   const p = prod(id); if(!p) return;
   const s = ps(id); M = {id, mat:s.mat, color:s.color, qty:1};
   $('#prodOv').hidden = false;
-  $('#mView').innerHTML = viewerMarkup('');
-  if(MV) MV.destroy();
-  MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color));
+  if(MV){ MV.destroy(); MV = null; }
+  if(BUILD[p.shape]){ $('#mView').innerHTML = viewerMarkup(''); MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color)); }
+  else $('#mView').innerHTML = p.photo ? `<img alt="${esc(L(p.name))}" src="${p.photo}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">` : '';
   renderModalInfo();
 }
 function closeProduct(){ if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
@@ -1153,7 +1153,6 @@ function setOrderStatus(ref, status, inote){
 function productDialog(id){
   const p = id ? prod(id) : null, shapes = Object.keys(BUILD);
   openDlg(p ? a('edit') : a('p_new'), `<form class="form" id="pForm" data-id="${esc(id || '')}" novalidate>
-    <label class="f">${a('p_shape')}<select class="inp" id="pfShape">${shapes.map(s => `<option value="${s}" ${p && p.shape === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></label>
     ${['hu','en','ru'].map(l => `<label class="f">${a('p_name')} ${l.toUpperCase()}<input class="inp" id="pfn_${l}" value="${esc(p ? p.name[l] : '')}"></label>`).join('')}
     ${['hu','en','ru'].map(l => `<label class="f">${a('p_desc')} ${l.toUpperCase()}<textarea class="inp" id="pfd_${l}" rows="2">${esc(p ? p.desc[l] : '')}</textarea></label>`).join('')}
     <div class="row2"><label class="f">${a('p_cat')}<select class="inp" id="pfCat">${cats().map(c => `<option value="${esc(c.id)}" ${p && p.cat === c.id ? 'selected' : ''}>${esc(L(c.name, alang))}</option>`).join('')}</select></label>
@@ -1338,7 +1337,7 @@ const FORMS = {
     const fb = name.hu || name.en || name.ru; if(!fb) return msg('pfErr', a('p_name_req'));
     ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; if(!desc[l]) desc[l] = desc.hu || desc.en || desc.ru || ''; });
     const price = parseInt($('#pfPrice').value, 10); if(!(price > 0)) return msg('pfErr', a('p_price_req'));
-    const data = {shape:$('#pfShape').value, cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
+    const old = id ? prod(id) : null, data = {shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
     const list = products();
     if(id){ const p = list.find(x => x.id === id); if(p) Object.assign(p, data); } else list.push(Object.assign({id:'p' + uid()}, data));
     if(!DB.set('products', list)) return msg('pfErr', a('p_photo_big'));
