@@ -2,18 +2,18 @@
 -- Запускать один раз: Supabase → SQL Editor → New query → вставить весь файл → Run.
 -- Потом так же запустить seed.sql (стартовые товары, материалы, цвета, доставка, купоны).
 
-create extension if not exists pgcrypto;
-
 -- ============ Профили покупателей ============
 create table if not exists public.profiles (
   id          uuid primary key references auth.users on delete cascade,
   name        text not null default '',
   email       text,
-  phone       jsonb,                 -- {cc:'hu', num:'201234567', text:'+36 20 123 4567'}
+  phone       jsonb,                 -- {cc:'hu', digits:'201234567', text:'+36 20 123 4567'}
   addr        jsonb,                 -- {delivery:'home', text:'...'}
   role        text not null default 'customer' check (role in ('customer','admin')),
+  wallet      text[] not null default '{}',   -- купоны, которые покупатель добавил себе
   created_at  timestamptz not null default now()
 );
+alter table public.profiles add column if not exists wallet text[] not null default '{}';
 
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
@@ -213,7 +213,7 @@ begin
       return jsonb_build_object('ok', false, 'key', 'cp_used_m'); end if;
   end if;
   d := case when c.type = 'percent' then round(p_subtotal * c.value / 100.0)::int else least(p_subtotal, c.value) end;
-  return jsonb_build_object('ok', true, 'code', c.code, 'discount', d, 'type', c.type, 'value', c.value);
+  return jsonb_build_object('ok', true, 'code', c.code, 'discount', d, 'type', c.type, 'value', c.value, 'min', c.min);
 end $$;
 
 -- ============ Оформление заказа ============
@@ -230,7 +230,7 @@ declare
   v_addr text := trim(coalesce(p->>'addr', ''));
 begin
   if length(v_name) < 2 then raise exception 'e_name'; end if;
-  if p->'phone' is null or length(regexp_replace(coalesce(p->'phone'->>'num', ''), '\D', '', 'g')) <> 9 then
+  if p->'phone' is null or length(regexp_replace(coalesce(p->'phone'->>'digits', p->'phone'->>'num', ''), '\D', '', 'g')) <> 9 then
     raise exception 'e_phone'; end if;
   if jsonb_typeof(p->'items') <> 'array' or jsonb_array_length(p->'items') = 0 then raise exception 'empty'; end if;
   if jsonb_array_length(p->'items') > 50 then raise exception 'too_many'; end if;
@@ -263,7 +263,7 @@ begin
     update public.coupons set used = used + 1 where code = cp->>'code';
   end if;
 
-  ref := 'TF-' || upper(substr(encode(gen_random_bytes(5), 'hex'), 1, 8));
+  ref := 'TF-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8));
 
   insert into public.orders (ref, user_id, name, phone, mail, tg, note, addr, delivery, items,
                              subtotal, discount, coupon, total, history)
@@ -298,6 +298,30 @@ begin
    where ref = p_ref;
 end $$;
 
+-- Купоны покупателя: добавленные им коды + «подарочные» (grant).
+create or replace function public.my_coupons()
+returns setof public.coupons language sql stable security definer set search_path = public as $$
+  select c.* from public.coupons c
+   where auth.uid() is not null
+     and (c.code = any (coalesce((select wallet from public.profiles where id = auth.uid()), '{}'))
+          or (c."grant" and c.active));
+$$;
+
+-- Добавить купон в кабинет по коду.
+create or replace function public.add_coupon(p_code text)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare c public.coupons;
+begin
+  if auth.uid() is null then return jsonb_build_object('ok', false, 'key', 'cp_login_m'); end if;
+  select * into c from public.coupons where code = upper(trim(coalesce(p_code, '')));
+  if not found or not c.active then return jsonb_build_object('ok', false, 'key', 'cp_invalid'); end if;
+  if c.expires is not null and c.expires < (now() at time zone 'Europe/Budapest')::date then
+    return jsonb_build_object('ok', false, 'key', 'cp_expired_m'); end if;
+  update public.profiles set wallet = array_append(wallet, c.code)
+   where id = auth.uid() and not (c.code = any (wallet));
+  return jsonb_build_object('ok', true, 'code', c.code);
+end $$;
+
 -- Явные права для API (работает и при выключенном «Automatically expose new tables»).
 -- Что именно можно делать со строками, всё равно решают политики RLS выше.
 grant usage on schema public to anon, authenticated;
@@ -314,3 +338,5 @@ grant execute on function public.place_order(jsonb) to anon, authenticated;
 grant execute on function public.check_coupon(text, int) to anon, authenticated;
 grant execute on function public.set_order_status(text, text) to authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
+grant execute on function public.my_coupons() to authenticated;
+grant execute on function public.add_coupon(text) to authenticated;

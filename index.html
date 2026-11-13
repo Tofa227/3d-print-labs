@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <style>
 /* Layout: a shop window with a print-bed viewer. Hero shows one product being built layer by layer, the catalog is the body.
    Account and admin are plain, dense work views reached by hash (#account, #admin). Dark-first like the old site (#0a0a0f). */
@@ -248,6 +249,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 .hl-hot{position:absolute;left:-4%;right:-4%;height:3px;background:var(--fg);box-shadow:0 0 14px 2px var(--accent);border-radius:2px;top:calc((1 - var(--p,1)) * 100%)}
 .hl-noz{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:20px solid var(--fg);margin:-22px 0 0 -9px;top:calc((1 - var(--p,1)) * 100%)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+#toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100;max-width:min(92vw,520px);padding:12px 16px;border-radius:10px;background:var(--fg);color:var(--bg);font:500 14px/1.4 var(--font-body,system-ui);box-shadow:0 8px 30px rgba(0,0,0,.35)}
 </style>
 
 <div class="wrap">
@@ -396,27 +398,75 @@ const DB = {
 };
 const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
-const products = () => DB.get('products', []);
-const cats = () => DB.get('cats', []);
-const users = () => DB.get('users', []);
-const orders = () => DB.get('orders', []);
-const coupons = () => DB.get('coupons', []);
-const deliveries = () => DB.get('delivery', []);
-const settings = () => Object.assign({}, SEED_SETTINGS, DB.get('settings', {}));
+/* ---------- Supabase ---------- */
+const SBC = window.__SB || {url:'https://suxnqplokgmxjmviazfr.supabase.co',
+  key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eG5xcGxva2dteGptdmlhemZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1Mjk5MDQsImV4cCI6MjExMDEwNTkwNH0.ov-dAIqbjGB2HolrBNMT-aTicxuzx9a6L_3TNhbM0KI'};
+const sb = window.supabase ? window.supabase.createClient(SBC.url, SBC.key, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}}) : null;
+const C = {products:[], cats:[], mats:[], colors:[], delivery:[], settings:{}, coupons:[], myCoupons:[], orders:[], users:[]};
+let ME = null;
+async function q(p){ const r = await p; if(r.error) throw r.error; return r.data; }
+const nz = a => Array.isArray(a) && a.length ? a : null;
+const MAP = {
+  products:{from:r => ({id:r.id, shape:r.shape || '', cat:r.cat, price:r.price, name:r.name, desc:r.descr || {}, active:r.active, photo:r.photo || '', mats:r.mats || [], colors:r.colors || [], sort:r.sort || 0}),
+            to:p => ({id:p.id, shape:p.shape || null, cat:p.cat || null, price:p.price, name:p.name, descr:p.desc || {}, active:!!p.active, photo:p.photo || '', mats:nz(p.mats), colors:nz(p.colors), sort:p.sort || 0})},
+  materials:{from:r => ({id:r.id, pct:+r.pct, S:r.s, H:r.h, F:r.f, temp:r.temp, use:r.use || {}, sort:r.sort || 0}),
+             to:m => ({id:m.id, pct:m.pct, s:m.S, h:m.H, f:m.F, temp:m.temp, use:m.use || {}, sort:m.sort || 0})},
+  colors:{from:r => ({id:r.id, hex:r.hex, name:r.name, sort:r.sort || 0}), to:c => ({id:c.id, hex:c.hex, name:c.name, sort:c.sort || 0})},
+  categories:{from:r => ({id:r.id, name:r.name, sort:r.sort || 0}), to:c => ({id:c.id, name:c.name, sort:c.sort || 0})},
+  delivery:{from:r => ({id:r.id, type:r.type, enabled:r.enabled, fee:r.fee, name:r.name, sort:r.sort || 0}), to:d => ({id:d.id, type:d.type, enabled:!!d.enabled, fee:d.fee, name:d.name, sort:d.sort || 0})},
+  coupons:{from:r => ({code:r.code, type:r.type, value:r.value, min:r.min, expires:r.expires || '', maxUses:r.max_uses, used:r.used, oncePerUser:r.once_per_user, active:r.active, grant:r.grant}),
+           to:c => ({code:c.code, type:c.type, value:c.value, min:c.min || 0, expires:c.expires || null, max_uses:c.maxUses || 0, once_per_user:!!c.oncePerUser, active:!!c.active, grant:!!c.grant})},
+  orders:{from:r => ({ref:r.ref, ts:Date.parse(r.created_at), userId:r.user_id, name:r.name, phone:r.phone, mail:r.mail, tg:r.tg, note:r.note, addr:r.addr, delivery:r.delivery,
+                     items:r.items, subtotal:r.subtotal, discount:r.discount, coupon:r.coupon, total:r.total, status:r.status, history:r.history || [], inote:r.inote || ''})},
+  profiles:{from:r => ({id:r.id, name:r.name || '', email:r.email || '', phone:r.phone, addr:r.addr || {delivery:'', text:''}, role:r.role, coupons:r.wallet || [], created:Date.parse(r.created_at)})}
+};
+const bySort = (x, y) => (x.sort || 0) - (y.sort || 0);
+async function loadPublic(){
+  const [p, c, m, co, d, st] = await Promise.all([
+    q(sb.from('products').select('*').order('sort').order('created_at')), q(sb.from('categories').select('*').order('sort')),
+    q(sb.from('materials').select('*').order('sort')), q(sb.from('colors').select('*').order('sort')),
+    q(sb.from('delivery').select('*').order('sort')), q(sb.from('settings').select('*').eq('id', 1).maybeSingle())]);
+  C.products = p.map(MAP.products.from); C.cats = c.map(MAP.categories.from); C.mats = m.map(MAP.materials.from);
+  C.colors = co.map(MAP.colors.from); C.delivery = d.map(MAP.delivery.from); C.settings = st ? st.data : {};
+}
+async function loadMe(){
+  const sess = (await sb.auth.getSession()).data.session;
+  if(!sess){ ME = null; adminOn = false; C.orders = []; C.coupons = []; C.myCoupons = []; C.users = []; return; }
+  const pr = await q(sb.from('profiles').select('*').eq('id', sess.user.id).maybeSingle());
+  ME = pr ? MAP.profiles.from(pr) : {id:sess.user.id, name:(sess.user.user_metadata || {}).name || '', email:sess.user.email, phone:null, addr:{delivery:'', text:''}, role:'customer', coupons:[], created:Date.now()};
+  adminOn = ME.role === 'admin';
+  const [o, my] = await Promise.all([q(sb.from('orders').select('*').order('created_at', {ascending:false})), q(sb.rpc('my_coupons'))]);
+  C.orders = o.map(MAP.orders.from); C.myCoupons = my.map(MAP.coupons.from);
+  if(adminOn){
+    const [k, u] = await Promise.all([q(sb.from('coupons').select('*').order('code')), q(sb.from('profiles').select('*').order('created_at', {ascending:false}))]);
+    C.coupons = k.map(MAP.coupons.from); C.users = u.map(MAP.profiles.from);
+  } else { C.coupons = C.myCoupons; C.users = [ME]; }
+}
+async function loadAll(){ await loadMe(); await loadPublic(); }
+function toast(text){
+  let el = $('#toast'); if(!el){ el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'alert'); document.body.appendChild(el); }
+  el.textContent = text; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => { el.hidden = true; }, 5000);
+}
+/* run an admin write, then reload data and re-render; returns false on error */
+async function save(fn, after){
+  try { await fn(); } catch(e){ console.error(e); toast((typeof a === 'function' ? a('err') : 'Error') + ': ' + (e.message || e)); return false; }
+  try { await loadAll(); } catch(e){ console.error(e); }
+  refreshShop(); if(after) after(); else renderAdmin();
+  return true;
+}
+const products = () => C.products;
+const cats = () => C.cats;
+const users = () => C.users;
+const orders = () => C.orders;
+const coupons = () => C.coupons;
+const myCoupons = () => C.myCoupons;
+const deliveries = () => C.delivery;
+const settings = () => Object.assign({}, SEED_SETTINGS, C.settings);
 const prod = id => products().find(p => p.id === id);
 const activeProducts = () => products().filter(p => p.active);
 async function hash(s){
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pl:' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
   catch(e){ return 'b64:' + btoa(unescape(encodeURIComponent('pl:' + s))); }
-}
-async function seed(){
-  if(!DB.get('mats', null)) DB.set('mats', SEED_MATS);
-  if(!DB.get('colors', null)) DB.set('colors', SEED_COLORS);
-  if(DB.get('seeded', false)) return;
-  DB.set('cats', SEED_CATS); DB.set('products', SEED_PRODUCTS); DB.set('delivery', SEED_DELIVERY); DB.set('coupons', SEED_COUPONS);
-  DB.set('settings', SEED_SETTINGS); DB.set('users', []); DB.set('orders', []); DB.set('cart', []);
-  DB.set('admin', {login:'admin', hash:await hash('admin')});
-  DB.set('seeded', true);
 }
 const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 
@@ -436,16 +486,16 @@ hu:{
  steps:[['Válassz','Böngészd a katalógust, nézd meg a 3D modellt, állítsd be az anyagot és a színt.'],['Rendelj','Tedd kosárba, add meg az elérhetőséged és az átvétel módját. Fiókkal követheted a rendelésed.'],['Nyomtatás','A kiválasztott anyagból legyártjuk, és átnézzük az elkészült darabot.'],['Átvétel','Személyes átvétel Tabon vagy Siófokon, csomagpont vagy házhoz szállítás.']],
  faq_title:'Gyakori kérdések',
  faq:[['Mennyi idő alatt készül el egy termék?','Jellemzően {a}–{b} munkanap a megrendeléstől, a méretétől és a darabszámtól függően. Pontos időpontot a visszaigazolásban adunk.'],['Milyen anyagot válasszak?','Dekorációhoz és játékhoz a PLA bőven elég. Terheltebb vagy melegebb helyre PETG, ABS vagy ASA való, kültérre az ASA.'],['Biztosan olyan színű lesz, mint az előnézet?','Az előnézet tájékoztató, a filament árnyalata gyártónként kissé eltér. Ha fontos az árnyalat, írd meg a megjegyzésben.'],['Látszanak a rétegvonalak?','Igen, a 3D nyomtatott tárgyak jellegzetessége. A katalógus 0,2 mm-es rétegvastagsággal készül.'],['Hogyan veszem át?','Személyesen Tabon vagy Siófokon, csomagponton vagy házhoz szállítással. A díj a kosárban látszik.'],['Mire jó a fiók?','Követheted a rendeléseid állapotát, újrarendelhetsz, kuponokat tárolhatsz és mentheted az adataidat.']],
- ft_note:'Árak forintban (HUF). Előnézeti változat: az adatok ebben a böngészőben tárolódnak.',
+ ft_note:'Árak forintban (HUF).',
  ct_title:'Kosár',ct_empty:'A kosár üres.',ct_remove:'Törlés',ct_delivery:'Átvétel',ct_total:'Végösszeg',ct_next:'Tovább a megrendeléshez',
  co_name:'Név',co_country:'Ország',co_phone:'Telefon',co_email:'E-mail (nem kötelező)',co_tg:'Telegram (nem kötelező)',co_addr:'Cím vagy csomagpont',co_note:'Megjegyzés',co_submit:'Megrendelés elküldése',
  e_name:'Add meg a neved.',e_phone:'A telefonszám 9 számjegy legyen.',e_email:'Érvénytelen e-mail cím.',e_addr:'Add meg a címet vagy a csomagpontot.',
- co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Előnézeti változat: a rendelés nem hagyja el a böngészőt. Éles működéshez szerveroldali fogadás kell.',back:'Vissza',
+ co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
  co_sub:'Részösszeg',co_disc:'Kedvezmény',co_fee:'Szállítás',co_guest:'Hozz létre fiókot, hogy követhesd a rendeléseidet.',co_login_hint:'Belépve a rendelésed követhető a fiókodban.',co_myacc:'Fiókom megnyitása',
  col:{graphite:'Grafit',white:'Fehér',orange:'Narancs',blue:'Kék',green:'Zöld',red:'Piros',grey:'Szürke'},
  acc_login:'Belépés',acc_my:'Fiókom',acc_logout:'Kilépés',acc_hello:'Szia',
  au_login_t:'Belépés',au_reg_t:'Regisztráció',au_email:'E-mail',au_pass:'Jelszó',au_name:'Név',au_phone:'Telefon',au_enter:'Belépés',au_create:'Fiók létrehozása',
- au_to_reg:'Nincs még fiókod? Regisztráció',au_to_login:'Van már fiókod? Belépés',au_bad:'Hibás e-mail vagy jelszó.',au_exists:'Ezzel az e-mail címmel már van fiók.',au_pass_min:'A jelszó legalább 6 karakter legyen.',au_demo:'Előnézeti változat: a fiókok ebben a böngészőben tárolódnak.',
+ au_to_reg:'Nincs még fiókod? Regisztráció',au_to_login:'Van már fiókod? Belépés',au_bad:'Hibás e-mail vagy jelszó.',au_exists:'Ezzel az e-mail címmel már van fiók.',au_pass_min:'A jelszó legalább 6 karakter legyen.',au_demo:'',
  acc_orders:'Rendeléseim',acc_coupons:'Kuponok',acc_profile:'Adataim',
  ord_none:'Még nincs rendelésed.',ord_reorder:'Újrarendelés',ord_items:'Tételek',ord_hist:'Állapotváltások',ord_cancelled:'A rendelés le lett mondva.',ord_shop:'Vissza a katalógushoz',
  st:{new:'Új',confirmed:'Visszaigazolva',printing:'Nyomtatás',ready:'Átvehető',done:'Átvéve',cancelled:'Lemondva'},
@@ -469,16 +519,16 @@ en:{
  steps:[['Choose','Browse the catalog, inspect the 3D model, set material and colour.'],['Order','Add to cart, leave your contact and pick how you receive it. With an account you can track the order.'],['Print','We print it in your chosen material and check the finished piece.'],['Receive','Pick-up in Tab or Siófok, parcel point, or home delivery.']],
  faq_title:'FAQ',
  faq:[['How long does a product take?','Usually {a}–{b} working days from the order, depending on size and quantity. The confirmation gives the exact date.'],['Which material should I pick?','PLA is plenty for decor and toys. For loaded or warmer places use PETG, ABS or ASA; ASA for outdoors.'],['Will the colour match the preview?','The preview is indicative and filament shades vary slightly by maker. If the shade matters, say so in the comment.'],['Will layer lines be visible?','Yes, it is the nature of 3D printing. The catalog is printed at 0.2 mm layers.'],['How do I receive it?','In person in Tab or Siófok, at a parcel point, or by home delivery. The fee shows in the cart.'],['What is the account for?','Track your orders, reorder, keep coupons and save your details.']],
- ft_note:'Prices in forints (HUF). Preview build: data is stored in this browser only.',
+ ft_note:'Prices in forints (HUF).',
  ct_title:'Cart',ct_empty:'Your cart is empty.',ct_remove:'Remove',ct_delivery:'Delivery',ct_total:'Total',ct_next:'Continue to checkout',
  co_name:'Name',co_country:'Country',co_phone:'Phone',co_email:'Email (optional)',co_tg:'Telegram (optional)',co_addr:'Address or parcel point',co_note:'Comment',co_submit:'Place order',
  e_name:'Enter your name.',e_phone:'Phone must have 9 digits.',e_email:'Invalid email address.',e_addr:'Enter an address or parcel point.',
- co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'Preview build: the order never leaves this browser. A server-side receiver is needed for live use.',back:'Back',
+ co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
  co_sub:'Subtotal',co_disc:'Discount',co_fee:'Delivery',co_guest:'Create an account to track your orders.',co_login_hint:'Signed in: you can track this order in your account.',co_myacc:'Open my account',
  col:{graphite:'Graphite',white:'White',orange:'Orange',blue:'Blue',green:'Green',red:'Red',grey:'Grey'},
  acc_login:'Sign in',acc_my:'My account',acc_logout:'Sign out',acc_hello:'Hi',
  au_login_t:'Sign in',au_reg_t:'Register',au_email:'Email',au_pass:'Password',au_name:'Name',au_phone:'Phone',au_enter:'Sign in',au_create:'Create account',
- au_to_reg:'No account yet? Register',au_to_login:'Already have an account? Sign in',au_bad:'Wrong email or password.',au_exists:'An account with this email already exists.',au_pass_min:'Password must be at least 6 characters.',au_demo:'Preview build: accounts are stored in this browser only.',
+ au_to_reg:'No account yet? Register',au_to_login:'Already have an account? Sign in',au_bad:'Wrong email or password.',au_exists:'An account with this email already exists.',au_pass_min:'Password must be at least 6 characters.',au_demo:'',
  acc_orders:'My orders',acc_coupons:'Coupons',acc_profile:'Details',
  ord_none:'You have no orders yet.',ord_reorder:'Reorder',ord_items:'Items',ord_hist:'Status history',ord_cancelled:'This order was cancelled.',ord_shop:'Back to catalog',
  st:{new:'New',confirmed:'Confirmed',printing:'Printing',ready:'Ready',done:'Collected',cancelled:'Cancelled'},
@@ -502,16 +552,16 @@ ru:{
  steps:[['Выбери','Листай каталог, смотри 3D-модель, задай материал и цвет.'],['Закажи','Добавь в корзину, оставь контакты и способ получения. С аккаунтом можно следить за заказом.'],['Печать','Печатаем выбранным материалом и проверяем готовое изделие.'],['Получение','Самовывоз в Табе или Шиофоке, пункт выдачи или доставка на дом.']],
  faq_title:'Частые вопросы',
  faq:[['Сколько делается товар?','Обычно {a}–{b} рабочих дня с момента заказа, в зависимости от размера и количества. Точную дату назовём в подтверждении.'],['Какой материал выбрать?','Для декора и игрушек хватит PLA. Для нагрузки и тепла берите PETG, ABS или ASA, для улицы ASA.'],['Цвет совпадёт с превью?','Превью ориентировочное, оттенок филамента слегка отличается у разных производителей. Если оттенок важен, напиши в комментарии.'],['Будут видны линии слоёв?','Да, это особенность 3D-печати. Каталог печатается слоем 0,2 мм.'],['Как получить заказ?','Лично в Табе или Шиофоке, в пункте выдачи или доставкой на дом. Стоимость видна в корзине.'],['Зачем нужен аккаунт?','Следить за заказами, повторять заказ, хранить купоны и свои данные.']],
- ft_note:'Цены в форинтах (HUF). Демо-версия: данные хранятся только в этом браузере.',
+ ft_note:'Цены в форинтах (HUF).',
  ct_title:'Корзина',ct_empty:'Корзина пуста.',ct_remove:'Удалить',ct_delivery:'Получение',ct_total:'Итого',ct_next:'К оформлению',
  co_name:'Имя',co_country:'Страна',co_phone:'Телефон',co_email:'Email (необязательно)',co_tg:'Telegram (необязательно)',co_addr:'Адрес или пункт выдачи',co_note:'Комментарий',co_submit:'Отправить заказ',
  e_name:'Введи имя.',e_phone:'В номере должно быть 9 цифр.',e_email:'Некорректный email.',e_addr:'Укажи адрес или пункт выдачи.',
- co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Демо-версия: заказ не покидает браузер. Для боевой работы нужен приём на сервере.',back:'Назад',
+ co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
  co_sub:'Сумма товаров',co_disc:'Скидка',co_fee:'Доставка',co_guest:'Создай аккаунт, чтобы следить за заказами.',co_login_hint:'Ты вошёл: заказ будет виден в кабинете.',co_myacc:'Открыть кабинет',
  col:{graphite:'Графит',white:'Белый',orange:'Оранжевый',blue:'Синий',green:'Зелёный',red:'Красный',grey:'Серый'},
  acc_login:'Войти',acc_my:'Кабинет',acc_logout:'Выйти',acc_hello:'Привет',
  au_login_t:'Вход',au_reg_t:'Регистрация',au_email:'Email',au_pass:'Пароль',au_name:'Имя',au_phone:'Телефон',au_enter:'Войти',au_create:'Создать аккаунт',
- au_to_reg:'Нет аккаунта? Регистрация',au_to_login:'Уже есть аккаунт? Войти',au_bad:'Неверный email или пароль.',au_exists:'Аккаунт с таким email уже есть.',au_pass_min:'Пароль минимум 6 символов.',au_demo:'Демо-версия: аккаунты хранятся только в этом браузере.',
+ au_to_reg:'Нет аккаунта? Регистрация',au_to_login:'Уже есть аккаунт? Войти',au_bad:'Неверный email или пароль.',au_exists:'Аккаунт с таким email уже есть.',au_pass_min:'Пароль минимум 6 символов.',au_demo:'',
  acc_orders:'Мои заказы',acc_coupons:'Купоны',acc_profile:'Мои данные',
  ord_none:'Заказов пока нет.',ord_reorder:'Повторить',ord_items:'Состав',ord_hist:'История статусов',ord_cancelled:'Заказ отменён.',ord_shop:'В каталог',
  st:{new:'Новый',confirmed:'Подтверждён',printing:'Печатается',ready:'Готов к выдаче',done:'Получен',cancelled:'Отменён'},
@@ -525,7 +575,7 @@ ru:{
 /* ---------- i18n (admin) ---------- */
 const AT = {
 ru:{
- login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Демо-доступ по умолчанию: admin / admin. Защита условная, данные лежат в браузере.',
+ login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
  t_dash:'Обзор',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
@@ -540,7 +590,7 @@ ru:{
  st_reset:'Сбросить демо-данные',st_reset_note:'Удалит все заказы, клиентов, купоны и изменения в каталоге и вернёт начальные данные.',st_lang:'Язык админки'
 },
 hu:{
- login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Alapértelmezett demó hozzáférés: admin / admin. A védelem csak jelképes, az adatok a böngészőben vannak.',
+ login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
  t_dash:'Áttekintés',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
@@ -564,8 +614,8 @@ const fmt = n => Math.round(n).toLocaleString('hu-HU') + ' Ft';
 let lang = lsGet('pl_lang'); if(!T[lang]) lang = 'hu';
 const t = k => (T[lang][k] !== undefined ? T[lang][k] : T.hu[k]);
 const L = (o, l) => o ? (o[l || lang] || o.hu || o.en || o.ru || '') : '';
-const mats = () => DB.get('mats', SEED_MATS);
-const colors = () => DB.get('colors', SEED_COLORS);
+const mats = () => C.mats;
+const colors = () => C.colors;
 const matById = id => { const l = mats(); return l.find(m => m.id === id) || l[0] || {id, pct:0, S:1, H:1, F:1, temp:0, use:{}}; };
 const colHex = id => { const l = colors(); return (l.find(c => c.id === id) || l[0] || {hex:'#888888'}).hex; };
 const colName = id => { const c = colors().find(x => x.id === id); return c ? L(c.name) : id; };
@@ -779,15 +829,14 @@ function thumbOf(shape, color){
 }
 
 /* ---------- session ---------- */
-const curUser = () => { const id = DB.get('session', null); return id ? users().find(u => u.id === id) || null : null; };
-let adminOn = false; try { adminOn = sessionStorage.getItem('pl2_admin') === '1'; } catch(e){}
-const setAdmin = on => { adminOn = on; try { on ? sessionStorage.setItem('pl2_admin', '1') : sessionStorage.removeItem('pl2_admin'); } catch(e){} };
+const curUser = () => ME;
+let adminOn = false, wantAdmin = false, recovering = false;
 function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); }
 
 /* ---------- dialogs ---------- */
 function openDlg(title, html, wide){ $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html; $('#dlgBox').classList.toggle('wide', !!wide); $('#dlgOv').hidden = false; const f = $('#dlgBody input,#dlgBody select,#dlgBody textarea'); if(f && !wide) try{ f.focus(); }catch(e){} }
 function closeDlg(){
-  $('#dlgOv').hidden = true; $('#dlgBody').innerHTML = ''; wantAcc = false;
+  $('#dlgOv').hidden = true; $('#dlgBody').innerHTML = ''; wantAcc = false; wantAdmin = false;
   const h = location.hash;
   if((h === '#admin' && !adminOn) || (h === '#account' && !curUser())) location.hash = 'top';   // so the same link works again
 }
@@ -915,7 +964,7 @@ function renderModalInfo(){
 
 /* ---------- cart ---------- */
 let cart = DB.get('cart', []); cart = Array.isArray(cart) ? cart : [];
-let delivery = '', cpCode = '', cpMsg = null, lastOrder = null;
+let delivery = '', cpCode = '', cpMsg = null, lastOrder = null, CP = null, busy = false;
 function saveCart(){ DB.set('cart', cart.map(l => ({pid:l.pid, mat:l.mat, color:l.color, qty:l.qty}))); $('#cartN').textContent = cart.reduce((n, l) => n + l.qty, 0); }
 function addLine(p, mat, color, qty){
   const ex = cart.find(l => l.pid === p.id && l.mat === mat && l.color === color);
@@ -928,7 +977,10 @@ function curDelivery(){ const list = enabledDeliveries(); return list.find(d => 
 function cartCalc(){
   const items = cartItems(), sub = items.reduce((s, l) => s + l.unit * l.qty, 0), d = curDelivery(), user = curUser();
   let disc = 0, cp = null;
-  if(cpCode){ const r = checkCoupon(coupons(), orders(), cpCode, sub, user); if(r.ok){ disc = r.discount; cp = r.c; } else { cpMsg = {bad:true, key:r.key, v:r.v}; cpCode = ''; } }
+  if(cpCode && CP){
+    if(sub < CP.min){ cpMsg = {bad:true, key:'cp_min_m', v:CP.min}; cpCode = ''; CP = null; }
+    else { disc = CP.type === 'percent' ? Math.round(sub * CP.value / 100) : Math.min(sub, CP.value); cp = CP; }
+  }
   return Object.assign({items, d, cp, user}, orderTotals(items, disc, d ? d.fee : 0));
 }
 const cpText = m => t(m.key).replace('{v}', m.v != null ? fmt(m.v) : '');
@@ -948,7 +1000,7 @@ function renderCart(step){
   const c = cartCalc();
   if(!c.items.length){ body.innerHTML = `<p class="small">${t('ct_empty')}</p>`; return; }
   if(step === 'checkout'){ renderCheckout(c); return; }
-  const wallet = c.user ? (c.user.coupons || []) : [];
+  const wallet = c.user ? myCoupons().filter(k => couponState(k, c.user, orders()) === 'active').map(k => k.code) : [];
   body.innerHTML = c.items.map((l, i) => `<div class="line">
       <div class="t">${esc(L(l.name))}</div><div class="p">${fmt(l.unit * l.qty)}</div>
       <div class="s">${esc([l.mat, colName(l.color), dimText(l.shape)].join(' · '))}</div>
@@ -985,7 +1037,8 @@ function renderCheckout(c){
     <div style="display:flex;gap:8px"><button type="button" class="btn" data-act="co-back">${t('back')}</button><button class="btn primary" style="flex:1">${t('co_submit')}</button></div>
   </form>`;
 }
-function submitOrder(){
+async function submitOrder(){
+  if(busy) return;
   const c = cartCalc(), need = c.d && c.d.type !== 'pickup';
   const name = $('#coName').value.trim(), ph = readPhone('co'), mail = $('#coMail').value.trim(), addr = need ? $('#coAddr').value.trim() : '';
   $('#eName').textContent = name.length < 2 ? t('e_name') : '';
@@ -993,19 +1046,25 @@ function submitOrder(){
   $('#eMail').textContent = mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail) ? t('e_email') : '';
   if(need) $('#eAddr').textContent = addr ? '' : t('e_addr');
   if($('#coForm .err:not(:empty)') || !c.items.length) return;
-  const ref = 'PL-' + Date.now().toString(36).toUpperCase(), now = Date.now(), user = c.user;
-  const o = {ref, ts:now, userId:user ? user.id : null, name, phone:ph, mail, tg:$('#coTg').value.trim(), note:$('#coNote').value.trim(), addr,
-    delivery:{id:c.d.id, type:c.d.type, name:c.d.name, fee:c.fee}, items:c.items.map(l => ({pid:l.pid, name:l.name, mat:l.mat, color:l.color, qty:l.qty, unit:l.unit})),
-    subtotal:c.subtotal, discount:c.discount, coupon:c.cp ? {code:c.cp.code, discount:c.discount} : null, total:c.total,
-    status:'new', history:[{status:'new', ts:now}], inote:''};
-  const all = orders(); all.push(o); DB.set('orders', all);
-  if(c.cp){ const cl = coupons(); const x = cl.find(k => k.code === c.cp.code); if(x){ x.used = (x.used || 0) + 1; DB.set('coupons', cl); } }
-  if(user){ const ul = users(), x = ul.find(k => k.id === user.id); if(x){ x.addr = {delivery:c.d.id, text:addr || (x.addr && x.addr.text) || ''}; DB.set('users', ul); } }
-  const text = [ref, dateStr(now), '', ...o.items.map(l => `• ${L(l.name)} (${l.mat}, ${colName(l.color)}) × ${l.qty} — ${fmt(l.unit * l.qty)}`), '',
-    `${t('ct_delivery')}: ${L(c.d.name)} (${fmt(c.fee)})`, ...(c.cp ? [`${t('co_disc')}: ${c.cp.code} −${fmt(c.discount)}`] : []), `${t('ct_total')}: ${fmt(c.total)}`, '',
+  const user = c.user, btn = $('#coForm button:not([type])');
+  const payload = {items:c.items.map(l => ({pid:l.pid, mat:l.mat, color:l.color, qty:l.qty})), delivery:c.d.id, coupon:c.cp ? c.cp.code : '',
+    name, phone:ph, mail, tg:$('#coTg').value.trim(), note:$('#coNote').value.trim(), addr};
+  busy = true; if(btn) btn.disabled = true;
+  let r;
+  try { r = await q(sb.rpc('place_order', {p:payload})); }
+  catch(e){
+    console.error(e); busy = false; if(btn) btn.disabled = false;
+    const m = String(e.message || ''), k = m.startsWith('coupon:') ? m.slice(7) : '';
+    if(k){ cpCode = ''; CP = null; cpMsg = {bad:true, key:k}; renderCart('cart'); return; }
+    toast(t('e_order')); return;
+  }
+  busy = false;
+  const o = MAP.orders.from(r);
+  const text = [o.ref, dateStr(o.ts), '', ...o.items.map(l => `• ${L(l.name)} (${l.mat}, ${colName(l.color)}) × ${l.qty} — ${fmt(l.unit * l.qty)}`), '',
+    `${t('ct_delivery')}: ${L(o.delivery.name)} (${fmt(o.delivery.fee)})`, ...(o.coupon ? [`${t('co_disc')}: ${o.coupon.code} −${fmt(o.discount)}`] : []), `${t('ct_total')}: ${fmt(o.total)}`, '',
     `${name} · ${ph.text}`, ...[mail, o.tg, addr, o.note].filter(Boolean)].join('\n');
-  lastOrder = {ref, text, user:!!user}; cart = []; cpCode = ''; cpMsg = null; saveCart(); renderCart('done');
-  if(!$('#viewAccount').hidden) renderAccount();
+  lastOrder = {ref:o.ref, text, user:!!user}; cart = []; cpCode = ''; CP = null; cpMsg = null; saveCart(); renderCart('done');
+  if(user){ try { await loadMe(); } catch(e){} if(!$('#viewAccount').hidden) renderAccount(); }
 }
 
 /* ---------- auth ---------- */
@@ -1020,28 +1079,35 @@ function authHTML(){
     <p id="auErr" class="err"></p>
     <button class="btn primary">${reg ? t('au_create') : t('au_enter')}</button>
     <button type="button" class="link" data-act="${reg ? 'au-login' : 'au-reg'}">${reg ? t('au_to_login') : t('au_to_reg')}</button>
-    <p class="small">${t('au_demo')}</p></form>`;
+    ${reg ? '' : `<button type="button" class="link" data-act="au-forgot">${t('au_reset')}</button>`}</form>`;
 }
 function openAuth(mode){ authMode = mode || 'login'; openDlg(authMode === 'register' ? t('au_reg_t') : t('au_login_t'), authHTML()); }
 async function submitAuth(){
+  if(busy) return;
   const email = $('#auEmail').value.trim().toLowerCase(), pass = $('#auPass').value;
+  const btn = $('#auForm .btn.primary');
+  const run = async fn => { busy = true; if(btn) btn.disabled = true; try { return await fn(); } finally { busy = false; if(btn && btn.isConnected) btn.disabled = false; } };
   if(authMode === 'login'){
-    const u = users().find(x => x.email === email);
-    if(!u || u.passHash !== await hash(pass)) return msg('auErr', t('au_bad'));
-    DB.set('session', u.id);
+    const r = await run(() => sb.auth.signInWithPassword({email, password:pass}));
+    if(r.error){ const m = String(r.error.message || ''); return msg('auErr', /confirm/i.test(m) ? t('e_email_unconf') : /invalid/i.test(m) ? t('au_bad') : t('e_net')); }
   } else {
     const name = $('#auName').value.trim(), ph = readPhone('au');
     if(name.length < 2) return msg('auErr', t('e_name'));
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('auErr', t('e_email'));
     if(!ph) return msg('auErr', t('e_phone'));
     if(pass.length < 6) return msg('auErr', t('au_pass_min'));
-    if(users().some(x => x.email === email)) return msg('auErr', t('au_exists'));
-    const u = {id:uid(), name, email, phone:ph, passHash:await hash(pass), created:Date.now(), coupons:coupons().filter(k => k.grant && k.active).map(k => k.code), addr:{delivery:'', text:''}};
-    const ul = users(); ul.push(u); DB.set('users', ul); DB.set('session', u.id);
+    const r = await run(() => sb.auth.signUp({email, password:pass, options:{data:{name, phone:ph}, emailRedirectTo:location.origin + location.pathname}}));
+    if(r.error){ const m = String(r.error.message || ''); return msg('auErr', /already|registered|exists/i.test(m) ? t('au_exists') : /password/i.test(m) ? t('au_pass_min') : m || t('e_net')); }
+    if(!r.data.session){ $('#dlgBody').innerHTML = `<p>${esc(t('au_confirm'))}</p><button class="btn primary" data-act="au-login">${t('au_enter')}</button>`; return; }
   }
-  const goAcc = wantAcc; closeDlg(); accLabel();
+  await afterAuth();
+}
+async function afterAuth(){
+  try { await loadAll(); } catch(e){ console.error(e); }
+  const goAcc = wantAcc, goAdm = wantAdmin; closeDlg(); wantAdmin = false; accLabel(); refreshShop();
   if(!$('#cartOv').hidden) renderCart('cart');
-  if(goAcc) go('account');
+  if(goAdm){ if(adminOn) go('admin'); else openDlg(a('login_t'), `<p>${esc(a('no_rights'))}</p>`); }
+  else if(goAcc) go('account');
 }
 let wantAcc = false;
 
@@ -1074,7 +1140,7 @@ function renderAccount(){
       </article>`;
     }).join('') : `<p class="empty">${t('ord_none')} <a href="#catalog">${t('ord_shop')}</a></p>`;
   } else if(accTab === 'coupons'){
-    const wallet = (u.coupons || []).map(code => coupons().find(c => c.code === code)).filter(Boolean);
+    const wallet = myCoupons();
     body = `<form class="cpbox" id="cpAddForm" style="max-width:420px;margin-bottom:6px"><input class="inp" id="cpAddIn" placeholder="${esc(t('cp_add_ph'))}" autocomplete="off" style="text-transform:uppercase"><button class="btn primary">${t('cp_add')}</button></form>
       <p id="cpAddMsg" class="err" style="margin-bottom:14px"></p>
       <div class="cplist">${wallet.length ? wallet.map(c => { const s = couponState(c, u, orders()); return `<div class="coupon"><div><b>${esc(c.code)}</b><div class="small">${esc(cpDesc(c))}</div></div><span class="st ${s === 'off' ? 'expired' : s}">${esc(s === 'active' ? t('cp_active') : s === 'used' ? t('cp_used') : t('cp_expired'))}</span></div>`; }).join('') : `<p class="empty">${t('cp_none')}</p>`}</div>`;
@@ -1082,7 +1148,7 @@ function renderAccount(){
     const dl = deliveries();
     body = `<form class="form" id="pfForm" style="max-width:520px" novalidate>
       <label class="f">${t('au_name')}<input class="inp" id="pfName" value="${esc(u.name)}"></label>
-      <label class="f">${t('au_email')}<input class="inp" id="pfEmail" type="email" value="${esc(u.email)}"></label>
+      <label class="f">${t('au_email')}<input class="inp" id="pfEmail" type="email" value="${esc(u.email)}" readonly disabled></label>
       <label class="f">${t('au_phone')}${phoneField('pf', u.phone)}</label>
       <label class="f">${t('pf_deliv')}<select class="inp" id="pfDel"><option value="">–</option>${dl.map(d => `<option value="${esc(d.id)}" ${u.addr && u.addr.delivery === d.id ? 'selected' : ''}>${esc(L(d.name))}</option>`).join('')}</select></label>
       <label class="f">${t('pf_addr')}<input class="inp" id="pfAddr" value="${esc(u.addr ? u.addr.text : '')}"></label>
@@ -1101,10 +1167,9 @@ function renderAccount(){
 /* ---------- admin ---------- */
 const adm = {tab:'dash', ordFilter:'all'};
 function openAdminLogin(){
-  openDlg(a('login_t'), `<form class="form" id="adLogin" novalidate>
-    <label class="f">${a('login')}<input class="inp" id="adUser" autocomplete="username"></label>
-    <label class="f">${a('pass')}<input class="inp" id="adPass" type="password" autocomplete="current-password"></label>
-    <p id="adErr" class="err"></p><button class="btn primary">${a('enter')}</button><p class="small">${a('demo')}</p></form>`);
+  if(curUser()){ openDlg(a('login_t'), `<p>${esc(a('no_rights'))}</p>`); return; }
+  openAuth('login'); wantAdmin = true; $('#dlgTitle').textContent = a('login_t');
+  const f = $('#auForm'); if(f) f.insertAdjacentHTML('beforeend', `<p class="small">${esc(a('demo'))}</p>`);
 }
 const stName = (s, l) => T[l || alang === 'hu' ? 'hu' : 'ru'].st[s];
 const stL = s => T[alang].st[s];
@@ -1162,8 +1227,8 @@ function renderAdmin(){
   } else if(adm.tab === 'users'){
     body = users().length ? `<div class="tablewrap"><table><thead><tr><th>${a('u_name')}</th><th>${a('u_email')}</th><th>${a('phone')}</th><th class="r">${a('u_orders')}</th><th>${a('u_reg')}</th><th></th></tr></thead><tbody>
       ${users().map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${phoneHtml(u.phone)}</td><td class="r mono">${orders().filter(o => o.userId === u.id).length}</td><td class="small">${dateStr(u.created)}</td>
-        <td><div class="rowbtns"><button class="btn sm" data-act="u-orders" data-id="${esc(u.id)}">${a('u_show')}</button><button class="btn sm" data-act="u-reset" data-id="${esc(u.id)}">${a('u_reset')}</button><button class="btn sm danger" data-act="u-del" data-id="${esc(u.id)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
-      </tbody></table></div>` : `<p class="empty">${a('u_none')}</p>`;
+        <td><div class="rowbtns"><button class="btn sm" data-act="u-orders" data-id="${esc(u.id)}">${a('u_show')}</button>${u.role === 'admin' ? ' <span class="st active">admin</span>' : ''}</div></td></tr>`).join('')}
+      </tbody></table></div><p class="small" style="margin-top:8px">${esc(a('u_note'))}</p>` : `<p class="empty">${a('u_none')}</p>`;
   } else if(adm.tab === 'coupons'){
     body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="k-edit" data-code="">${a('add')}</button></div>
       <div class="tablewrap"><table><thead><tr><th>${a('k_code')}</th><th>${a('k_val')}</th><th class="r">${a('k_min')}</th><th>${a('k_exp')}</th><th class="r">${a('k_used')}</th><th>${a('k_active')}</th><th></th></tr></thead><tbody>
@@ -1172,7 +1237,7 @@ function renderAdmin(){
         <td><div class="rowbtns"><button class="btn sm" data-act="k-edit" data-code="${esc(c.code)}">${a('edit')}</button><button class="btn sm danger" data-act="k-del" data-code="${esc(c.code)}" data-sure="1">${a('del')}</button></div></td></tr>`).join('')}
       </tbody></table></div>`;
   } else {
-    const s = settings(), ad = DB.get('admin', {login:'admin'});
+    const s = settings();
     body = `<h2 class="sub" style="margin-top:0">${a('d_title')}</h2>
       <div class="rowbtns" style="margin-bottom:12px"><button class="btn" data-act="d-edit" data-id="" data-type="pickup">${a('d_add')}</button></div>
       <div class="tablewrap"><table style="min-width:560px"><thead><tr><th>${a('d_name')}</th><th>${a('d_type')}</th><th class="r">${a('d_fee')}</th><th>${a('d_on')}</th><th></th></tr></thead><tbody>
@@ -1181,13 +1246,7 @@ function renderAdmin(){
       </tbody></table></div><p id="dMsg" class="err" style="margin-top:8px"></p>
       <h2 class="sub">${a('st_lead')}</h2>
       <form class="form" id="leadForm" style="max-width:360px"><div class="row2"><label class="f">${a('st_from')}<input class="inp" id="leadMin" type="number" min="0" value="${s.leadMin}"></label><label class="f">${a('st_to')}<input class="inp" id="leadMax" type="number" min="0" value="${s.leadMax}"></label></div>
-        <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
-      <h2 class="sub">${a('st_cred')}</h2>
-      <form class="form" id="credForm" style="max-width:360px"><label class="f">${a('st_login')}<input class="inp" id="crLogin" value="${esc(ad.login)}" autocomplete="username"></label>
-        <label class="f">${a('st_pass')}<input class="inp" id="crPass" type="password" autocomplete="new-password"></label>
-        <p id="crMsg" class="err"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
-      <h2 class="sub">${a('st_reset')}</h2><p class="small" style="margin-bottom:10px;max-width:560px">${a('st_reset_note')}</p>
-      <button class="btn danger" data-act="reset-demo" data-sure="1">${a('st_reset')}</button>`;
+        <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>`;
   }
   box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">TOFA3D Studio</div><h1>${a('title')}</h1></div>
     <div class="rowbtns"><div class="seg" role="group" aria-label="Admin language"><button data-act="adm-lang" data-l="ru" aria-pressed="${alang === 'ru'}">RU</button><button data-act="adm-lang" data-l="hu" aria-pressed="${alang === 'hu'}">HU</button></div>
@@ -1219,10 +1278,11 @@ function ordDialog(ref){
       <div class="rowbtns"><button class="btn primary">${a('save')}</button><button type="button" class="btn danger" data-act="ord-del" data-ref="${esc(o.ref)}" data-sure="1">${a('del')}</button></div></form>`, true);
 }
 function setOrderStatus(ref, status, inote){
-  const all = orders(), o = all.find(x => x.ref === ref); if(!o) return;
-  if(o.status !== status){ o.status = status; o.history.push({status, ts:Date.now()}); }
-  if(inote != null) o.inote = inote;
-  DB.set('orders', all);
+  const o = orders().find(x => x.ref === ref); if(!o) return;
+  return save(async () => {
+    if(o.status !== status) await q(sb.rpc('set_order_status', {p_ref:ref, p_status:status}));
+    if(inote != null && inote !== o.inote) await q(sb.from('orders').update({inote}).eq('ref', ref));
+  });
 }
 function productDialog(id){
   const p = id ? prod(id) : null, shapes = Object.keys(BUILD);
@@ -1326,57 +1386,69 @@ const ACT = {
   'c-rm':el => { cart.splice(+el.dataset.i, 1); saveCart(); renderCart('cart'); },
   'cp-apply':() => applyCoupon($('#cpIn').value),
   'cp-pick':el => applyCoupon(el.dataset.code),
-  'cp-clear':() => { cpCode = ''; cpMsg = null; renderCart('cart'); },
+  'cp-clear':() => { cpCode = ''; CP = null; cpMsg = null; renderCart('cart'); },
   'to-checkout':() => { cpMsg = null; renderCart('checkout'); },
   'co-back':() => renderCart('cart'),
   'copy-sum':async el => { try { await navigator.clipboard.writeText(lastOrder.text); el.textContent = t('co_copied'); } catch(e){ const r = document.createRange(); r.selectNodeContents($('#sumTxt')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } },
   'goto-acc':() => { closeCart(); go('account'); },
   'acc-open':() => { if(curUser()) go('account'); else { wantAcc = true; openAuth('login'); } },
   'au-login':() => openAuth('login'), 'au-reg':() => { closeCart(); openAuth('register'); },
-  'logout':() => { DB.del('session'); accLabel(); go('top'); },
+  'logout':async () => { await sb.auth.signOut(); try { await loadAll(); } catch(e){} accLabel(); refreshShop(); go('top'); },
+  'au-forgot':async () => {
+    const email = ($('#auEmail').value || '').trim().toLowerCase();
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('auErr', t('e_email'));
+    const r = await sb.auth.resetPasswordForEmail(email, {redirectTo:location.origin + location.pathname + '#account'});
+    msg('auErr', r.error ? t('e_net') : t('au_reset_sent'), !r.error);
+  },
   'acc-tab':el => { accTab = el.dataset.tab; renderAccount(); },
   'reorder':el => { const o = orders().find(x => x.ref === el.dataset.ref); if(!o) return; o.items.forEach(l => { const p = prod(l.pid); if(p && p.active) addLineQuiet(p, l.mat, l.color, l.qty); }); saveCart(); openCart(); },
   /* admin */
-  'adm-tab':el => { adm.tab = el.dataset.tab; renderAdmin(); },
+  'adm-tab':el => { adm.tab = el.dataset.tab; renderAdmin(); if(adm.tab === 'dash' || adm.tab === 'orders' || adm.tab === 'users') loadMe().then(renderAdmin).catch(() => {}); },
   'adm-lang':el => { alang = el.dataset.l; lsSet('pl_alang', alang); renderAdmin(); },
-  'adm-logout':() => { setAdmin(false); go('top'); },
+  'adm-logout':async () => { await sb.auth.signOut(); try { await loadAll(); } catch(e){} accLabel(); refreshShop(); go('top'); },
   'ord-filter':el => { adm.ordFilter = el.dataset.s; renderAdmin(); },
   'ord-open':el => ordDialog(el.dataset.ref),
-  'ord-del':el => { DB.set('orders', orders().filter(o => o.ref !== el.dataset.ref)); closeDlg(); renderAdmin(); },
+  'ord-del':el => { closeDlg(); save(() => q(sb.from('orders').delete().eq('ref', el.dataset.ref))); },
   'p-edit':el => productDialog(el.dataset.id),
-  'p-del':el => { DB.set('products', products().filter(p => p.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
+  'p-del':el => save(() => q(sb.from('products').delete().eq('id', el.dataset.id))),
   'p-photo-rm':() => { dlgPhoto = ''; $('#pfPrev').innerHTML = ''; },
   'mt-edit':el => matDialog(el.dataset.id),
   'cl-edit':el => colorDialog(el.dataset.id),
   'mt-del':el => {
     const list = mats(); if(list.length <= 1) return msg('mtMsg', a('mt_last'));
-    DB.set('mats', list.filter(m => m.id !== el.dataset.id));
-    const ps2 = products(); ps2.forEach(p => { if(p.mats) p.mats = p.mats.filter(x => x !== el.dataset.id); }); DB.set('products', ps2);
-    refreshShop(); renderAdmin();
+    const id = el.dataset.id;
+    save(async () => {
+      for(const p of products().filter(p => (p.mats || []).includes(id))) await q(sb.from('products').update({mats:nz(p.mats.filter(x => x !== id))}).eq('id', p.id));
+      await q(sb.from('materials').delete().eq('id', id));
+    });
   },
   'cl-del':el => {
     const list = colors(); if(list.length <= 1) return msg('clMsg', a('mt_last'));
-    DB.set('colors', list.filter(c => c.id !== el.dataset.id));
-    const ps2 = products(); ps2.forEach(p => { if(p.colors) p.colors = p.colors.filter(x => x !== el.dataset.id); }); DB.set('products', ps2);
-    refreshShop(); renderAdmin();
+    const id = el.dataset.id;
+    save(async () => {
+      for(const p of products().filter(p => (p.colors || []).includes(id))) await q(sb.from('products').update({colors:nz(p.colors.filter(x => x !== id))}).eq('id', p.id));
+      await q(sb.from('colors').delete().eq('id', id));
+    });
   },
   'c-edit':el => catDialog(el.dataset.id),
-  'c-del':el => { if(products().some(p => p.cat === el.dataset.id)){ msg('catMsg', a('c_in_use')); return; } DB.set('cats', cats().filter(c => c.id !== el.dataset.id)); refreshShop(); renderAdmin(); },
+  'c-del':el => { if(products().some(p => p.cat === el.dataset.id)){ msg('catMsg', a('c_in_use')); return; } save(() => q(sb.from('categories').delete().eq('id', el.dataset.id))); },
   'u-orders':el => { const list = orders().filter(o => o.userId === el.dataset.id).sort((x, y) => y.ts - x.ts); const u = users().find(x => x.id === el.dataset.id); openDlg(u ? u.name : '', list.length ? `<div class="tablewrap"><table style="min-width:520px">${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`, true); },
-  'u-reset':el => openDlg(a('u_reset'), `<form class="form" id="uResetForm" data-id="${esc(el.dataset.id)}"><label class="f">${a('u_newpass')}<input class="inp" id="uNewPass" type="password" autocomplete="new-password"></label><p id="uErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`),
-  'u-del':el => { DB.set('users', users().filter(u => u.id !== el.dataset.id)); if(DB.get('session', null) === el.dataset.id) DB.del('session'); accLabel(); renderAdmin(); },
+
   'k-edit':el => couponDialog(el.dataset.code),
-  'k-del':el => { DB.set('coupons', coupons().filter(c => c.code !== el.dataset.code)); renderAdmin(); },
+  'k-del':el => save(() => q(sb.from('coupons').delete().eq('code', el.dataset.code))),
   'd-edit':el => deliveryDialog(el.dataset.id, el.dataset.type),
-  'd-del':el => { const rest = deliveries().filter(d => d.id !== el.dataset.id); if(!rest.some(d => d.enabled)){ msg('dMsg', a('d_min1')); return; } DB.set('delivery', rest); renderAdmin(); },
-  'reset-demo':async () => { DB.wipe(); cart = []; cpCode = ''; await seed(); PS_reset(); accLabel(); saveCart(); refreshShop(); adm.tab = 'dash'; renderAdmin(); }
+  'd-del':el => { const rest = deliveries().filter(d => d.id !== el.dataset.id); if(!rest.some(d => d.enabled)){ msg('dMsg', a('d_min1')); return; } save(() => q(sb.from('delivery').delete().eq('id', el.dataset.id))); },
 };
 function PS_reset(){ Object.keys(PS).forEach(k => delete PS[k]); }
 function addLineQuiet(p, mat, color, qty){ const ex = cart.find(l => l.pid === p.id && l.mat === mat && l.color === color); if(ex) ex.qty = Math.min(500, ex.qty + qty); else cart.push({pid:p.id, mat, color, qty}); }
-function applyCoupon(code){
+async function applyCoupon(code){
   code = String(code || '').trim().toUpperCase(); if(!code){ return; }
-  const c = cartCalc(), r = checkCoupon(coupons(), orders(), code, c.subtotal, c.user);
-  if(r.ok){ cpCode = code; cpMsg = {bad:false, text:t('cp_applied') + ': ' + code}; } else cpMsg = {bad:true, key:r.key, v:r.v};
+  const c = cartCalc();
+  try {
+    const r = await q(sb.rpc('check_coupon', {p_code:code, p_subtotal:c.subtotal}));
+    if(r.ok){ cpCode = r.code; CP = {code:r.code, type:r.type, value:r.value, min:r.min}; cpMsg = {bad:false, text:t('cp_applied') + ': ' + r.code}; }
+    else { cpCode = ''; CP = null; cpMsg = {bad:true, key:r.key, v:r.v}; }
+  } catch(e){ console.error(e); cpMsg = {bad:true, text:t('e_net')}; }
   renderCart('cart');
 }
 document.addEventListener('click', e => {
@@ -1395,7 +1467,7 @@ const INP = {
   mask:el => { el.value = mapPhone(el.value); },
   dl:el => { delivery = el.value; renderCart('cart'); },
   mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
-  ostatus:el => { setOrderStatus(el.dataset.ref, el.value); renderAdmin(); },
+  ostatus:el => setOrderStatus(el.dataset.ref, el.value),
   photo:async el => { const f = el.files[0]; if(!f) return; const url = await readPhoto(f); if(url){ dlgPhoto = url; $('#pfPrev').innerHTML = `<img class="thumb" style="width:96px;height:72px" src="${url}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>`; } }
 };
 ['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
@@ -1407,37 +1479,33 @@ const INP = {
 const FORMS = {
   coForm:() => submitOrder(),
   auForm:() => submitAuth(),
-  adLogin:async () => {
-    const ad = DB.get('admin', null);
-    if(ad && $('#adUser').value.trim() === ad.login && ad.hash === await hash($('#adPass').value)){ setAdmin(true); closeDlg(); go('admin'); }
-    else msg('adErr', a('bad'));
-  },
-  cpAddForm:() => {
+  cpAddForm:async () => {
     const u = curUser(), code = $('#cpAddIn').value.trim().toUpperCase(); if(!u || !code) return;
-    const c = coupons().find(x => x.code === code);
-    if(!c || !c.active) return msg('cpAddMsg', t('cp_invalid'));
     if((u.coupons || []).includes(code)) return msg('cpAddMsg', t('cp_have'));
-    const ul = users(), x = ul.find(k => k.id === u.id); x.coupons = [...(x.coupons || []), code]; DB.set('users', ul);
+    let r; try { r = await q(sb.rpc('add_coupon', {p_code:code})); } catch(e){ return msg('cpAddMsg', t('e_net')); }
+    if(!r.ok) return msg('cpAddMsg', t(r.key === 'cp_expired_m' ? 'cp_expired_m' : 'cp_invalid'));
+    try { await loadMe(); } catch(e){}
     renderAccount(); msg('cpAddMsg', t('cp_added'), true);
   },
-  pfForm:() => {
+  pfForm:async () => {
     const u = curUser(); if(!u) return;
-    const name = $('#pfName').value.trim(), email = $('#pfEmail').value.trim().toLowerCase(), ph = readPhone('pf');
+    const name = $('#pfName').value.trim(), ph = readPhone('pf');
     if(name.length < 2) return msg('pfMsg', t('e_name'));
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('pfMsg', t('e_email'));
     if(!ph) return msg('pfMsg', t('e_phone'));
-    if(users().some(x => x.email === email && x.id !== u.id)) return msg('pfMsg', t('pf_email_taken'));
-    const ul = users(), x = ul.find(k => k.id === u.id); Object.assign(x, {name, email, phone:ph, addr:{delivery:$('#pfDel').value, text:$('#pfAddr').value.trim()}}); DB.set('users', ul);
+    try { await q(sb.from('profiles').update({name, phone:ph, addr:{delivery:$('#pfDel').value, text:$('#pfAddr').value.trim()}}).eq('id', u.id)); await loadMe(); }
+    catch(e){ console.error(e); return msg('pfMsg', t('e_net')); }
     accLabel(); msg('pfMsg', t('pf_saved'), true);
   },
   pwForm:async () => {
     const u = curUser(); if(!u) return;
-    if(u.passHash !== await hash($('#pwOld').value)) return msg('pwMsg', t('pf_pass_bad'));
     if($('#pwNew').value.length < 6) return msg('pwMsg', t('au_pass_min'));
-    const ul = users(), x = ul.find(k => k.id === u.id); x.passHash = await hash($('#pwNew').value); DB.set('users', ul);
+    if(!recovering){ const chk = await sb.auth.signInWithPassword({email:u.email, password:$('#pwOld').value}); if(chk.error) return msg('pwMsg', t('pf_pass_bad')); }
+    recovering = false;
+    const r = await sb.auth.updateUser({password:$('#pwNew').value});
+    if(r.error) return msg('pwMsg', r.error.message || t('e_net'));
     $('#pwOld').value = ''; $('#pwNew').value = ''; msg('pwMsg', t('pf_pass_ok'), true);
   },
-  ordForm:e => { setOrderStatus(e.target.dataset.ref, $('#ordSt').value, $('#ordNote').value.trim()); closeDlg(); renderAdmin(); },
+  ordForm:e => { const ref = e.target.dataset.ref, st = $('#ordSt').value, note = $('#ordNote').value.trim(); closeDlg(); setOrderStatus(ref, st, note); },
   pForm:e => {
     const id = e.target.dataset.id, name = {}, desc = {};
     ['hu','en','ru'].forEach(l => { name[l] = $('#pfn_' + l).value.trim(); desc[l] = $('#pfd_' + l).value.trim(); });
@@ -1447,19 +1515,17 @@ const FORMS = {
     const pm = $$('#pForm .pm:checked').map(x => x.value), pc = $$('#pForm .pc:checked').map(x => x.value);
     if(!pm.length || !pc.length) return msg('pfErr', a('p_mc_req'));
     const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
-    const list = products();
-    if(id){ const p = list.find(x => x.id === id); if(p) Object.assign(p, data); } else list.push(Object.assign({id:'p' + uid()}, data));
-    if(!DB.set('products', list)) return msg('pfErr', a('p_photo_big'));
-    closeDlg(); refreshShop(); renderAdmin();
+    const row = MAP.products.to(Object.assign({id:id || 'p' + uid(), sort:old ? old.sort : products().length}, data));
+    save(() => q(sb.from('products').upsert(row)), () => { closeDlg(); renderAdmin(); });
   },
   mtForm:e => {
-    const old = e.target.dataset.id, id = $('#mtId').value.trim().toUpperCase().slice(0, 20), n = k => Math.max(0, parseInt($('#' + k).value, 10) || 0);
+    const old = e.target.dataset.id, id = old || $('#mtId').value.trim().toUpperCase().slice(0, 20), n = k => Math.max(0, parseInt($('#' + k).value, 10) || 0);
     if(!id) return msg('mtErr', a('mt_req'));
     const list = mats(); if(!old && list.some(m => m.id === id)) return msg('mtErr', a('mt_dup'));
     const use = {}; ['hu','en','ru'].forEach(l => use[l] = $('#mu_' + l).value.trim());
     const data = {id, pct:n('mt_pct'), temp:n('mt_temp'), S:Math.min(5, Math.max(1, n('mt_S'))), H:Math.min(5, Math.max(1, n('mt_H'))), F:Math.min(5, Math.max(1, n('mt_F'))), use};
-    if(old){ const m = list.find(x => x.id === old); if(m) Object.assign(m, data); } else list.push(data);
-    DB.set('mats', list); closeDlg(); refreshShop(); renderAdmin();
+    const prev = list.find(x => x.id === id); data.sort = prev ? prev.sort : list.length;
+    save(() => q(sb.from('materials').upsert(MAP.materials.to(data))), () => { closeDlg(); renderAdmin(); });
   },
   clForm:e => {
     const old = e.target.dataset.id, name = {};
@@ -1467,8 +1533,9 @@ const FORMS = {
     const fb = name.hu || name.en || name.ru; if(!fb) return msg('clErr', a('mt_req'));
     ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
     const list = colors(), hex = $('#clHex').value;
-    if(old){ const c = list.find(x => x.id === old); if(c) Object.assign(c, {name, hex}); } else list.push({id:'c' + uid(), name, hex});
-    DB.set('colors', list); closeDlg(); refreshShop(); renderAdmin();
+    const prev = old ? list.find(x => x.id === old) : null;
+    const row = {id:old || 'c' + uid(), name, hex, sort:prev ? prev.sort : list.length};
+    save(() => q(sb.from('colors').upsert(MAP.colors.to(row))), () => { closeDlg(); renderAdmin(); });
   },
   catForm:e => {
     const id = e.target.dataset.id, name = {};
@@ -1476,23 +1543,18 @@ const FORMS = {
     const fb = name.hu || name.en || name.ru; if(!fb) return msg('cErr', a('p_name_req'));
     ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
     const list = cats();
-    if(id){ const c = list.find(x => x.id === id); if(c) c.name = name; } else list.push({id:'c' + uid(), name});
-    DB.set('cats', list); closeDlg(); refreshShop(); renderAdmin();
-  },
-  uResetForm:async e => {
-    const pw = $('#uNewPass').value; if(pw.length < 6) return msg('uErr', a('u_pass_min'));
-    const ul = users(), u = ul.find(x => x.id === e.target.dataset.id); if(u){ u.passHash = await hash(pw); DB.set('users', ul); }
-    closeDlg();
+    const prev = id ? list.find(x => x.id === id) : null;
+    const row = {id:id || 'k' + uid(), name, sort:prev ? prev.sort : list.length};
+    save(() => q(sb.from('categories').upsert(MAP.categories.to(row))), () => { closeDlg(); renderAdmin(); });
   },
   kForm:e => {
-    const old = e.target.dataset.code, code = $('#kCode').value.trim().toUpperCase(), value = parseInt($('#kVal').value, 10);
+    const old = e.target.dataset.code, code = old || $('#kCode').value.trim().toUpperCase(), value = parseInt($('#kVal').value, 10);
     if(!code || !(value > 0)) return msg('kErr', a('k_bad'));
     const list = coupons();
     if(!old && list.some(c => c.code === code)) return msg('kErr', a('k_dup'));
     const data = {code, type:$('#kType').value, value, min:parseInt($('#kMin').value, 10) || 0, expires:$('#kExp').value || '', maxUses:parseInt($('#kMax').value, 10) || 0,
       oncePerUser:$('#kOnce').checked, grant:$('#kGrant').checked, active:$('#kActive').checked};
-    if(old){ const c = list.find(x => x.code === old); if(c) Object.assign(c, data); } else list.push(Object.assign({used:0}, data));
-    DB.set('coupons', list); closeDlg(); renderAdmin();
+    save(() => q(sb.from('coupons').upsert(MAP.coupons.to(data))), () => { closeDlg(); renderAdmin(); });
   },
   dForm:e => {
     const id = e.target.dataset.id, name = {};
@@ -1500,18 +1562,14 @@ const FORMS = {
     const fb = name.hu || name.en || name.ru; if(!fb) return msg('dErr', a('p_name_req'));
     ['hu','en','ru'].forEach(l => { if(!name[l]) name[l] = fb; });
     const list = deliveries(), fee = Math.max(0, parseInt($('#dFee').value, 10) || 0), enabled = $('#dOn').checked;
-    if(id){ const d = list.find(x => x.id === id); if(d) Object.assign(d, {name, fee, enabled}); } else list.push({id:'d' + uid(), type:e.target.dataset.type, name, fee, enabled});
-    if(!list.some(d => d.enabled)) return msg('dErr', a('d_min1'));
-    DB.set('delivery', list); closeDlg(); renderAdmin(); if(!$('#cartOv').hidden) renderCart('cart');
+    const prev = id ? list.find(x => x.id === id) : null;
+    const row = prev ? Object.assign({}, prev, {name, fee, enabled}) : {id:'d' + uid(), type:e.target.dataset.type, name, fee, enabled, sort:list.length};
+    if(!list.map(d => d.id === row.id ? row : d).concat(prev ? [] : [row]).some(d => d.enabled)) return msg('dErr', a('d_min1'));
+    save(() => q(sb.from('delivery').upsert(MAP.delivery.to(row))), () => { closeDlg(); renderAdmin(); if(!$('#cartOv').hidden) renderCart('cart'); });
   },
   leadForm:() => {
     const mn = Math.max(0, parseInt($('#leadMin').value, 10) || 0), mx = Math.max(mn, parseInt($('#leadMax').value, 10) || 0);
-    DB.set('settings', Object.assign(settings(), {leadMin:mn, leadMax:mx})); renderStatic(); msg('leadMsg', a('saved'), true);
-  },
-  credForm:async () => {
-    const login = $('#crLogin').value.trim(), pass = $('#crPass').value;
-    if(login.length < 3 || pass.length < 6) return msg('crMsg', a('st_cred_bad'));
-    DB.set('admin', {login, hash:await hash(pass)}); $('#crPass').value = ''; msg('crMsg', a('saved'), true);
+    save(() => q(sb.from('settings').upsert({id:1, data:Object.assign({}, C.settings, {leadMin:mn, leadMax:mx})})), () => { renderStatic(); renderAdmin(); msg('leadMsg', a('saved'), true); });
   }
 };
 document.addEventListener('submit', e => { e.preventDefault(); const f = FORMS[e.target.id]; if(f) f(e); });
@@ -1546,7 +1604,11 @@ $('#cartBtn').addEventListener('click', () => openCart());
 
 (async function boot(){
   const th = lsGet('pl_theme'); if(th === 'light' || th === 'dark') applyTheme(th);
-  await seed();
+  if(!sb){ toast(t('e_net')); }
+  else {
+    try { await loadAll(); } catch(e){ console.error(e); toast(t('e_net')); }
+    sb.auth.onAuthStateChange(ev => { if(ev === 'PASSWORD_RECOVERY') recovering = true, setTimeout(() => { go('account'); accTab = 'profile'; renderAccount(); }, 300); });
+  }
   cart = DB.get('cart', []); cart = Array.isArray(cart) ? cart.filter(l => l && prod(l.pid)) : [];
   saveCart(); applyLang();
   startHeroAnim();
