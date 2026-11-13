@@ -8,3 +8,10 @@
 - Личный кабинет: заказы, купоны, профиль (`#account`)
 - Демо-админка: `#admin`, логин `admin`, пароль `admin`
 - Данные хранятся только в localStorage браузера (демо, без сервера)
+
+## Публикация
+
+- **Хостинг:** GitHub Pages из ветки `main`, папка `/`. Файл `CNAME` привязывает домен `tofa3dstudio.com`.
+- **DNS (Cloudflare):** записи A для `@` на `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153` и CNAME `www` → `tofa227.github.io`, все в режиме «DNS only» (серое облако).
+- **База (Supabase):** `supabase/schema.sql`, затем `supabase/seed.sql` в SQL Editor. Цены, скидки и доставка считаются на сервере функцией `place_order`, купоны проверяет `check_coupon`. Первый админ назначается в SQL Editor:
+  `update profiles set role = 'admin' where email = '<почта>';`
