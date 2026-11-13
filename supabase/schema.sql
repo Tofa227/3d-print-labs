@@ -26,9 +26,9 @@ language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, name, email, phone)
   values (new.id,
-          coalesce(new.raw_user_meta_data->>'name', ''),
+          left(coalesce(new.raw_user_meta_data->>'name', ''), 100),
           new.email,
-          new.raw_user_meta_data->'phone')
+          case when pg_column_size(new.raw_user_meta_data->'phone') < 400 then new.raw_user_meta_data->'phone' end)
   on conflict (id) do nothing;
   return new;
 end $$;
@@ -142,6 +142,28 @@ create table if not exists public.orders (
   inote       text not null default ''   -- внутренняя заметка админа
 );
 create index if not exists orders_user_idx on public.orders (user_id, created_at desc);
+create index if not exists orders_created_idx on public.orders (created_at desc);
+
+-- Внутренние заметки админа к заказам: отдельная таблица, покупатель их не видит.
+create table if not exists public.order_notes (
+  ref   text primary key references public.orders on delete cascade on update cascade,
+  note  text not null default '' check (char_length(note) <= 5000)
+);
+insert into public.order_notes (ref, note)
+  select ref, inote from public.orders where inote <> '' on conflict (ref) do nothing;
+update public.orders set inote = '' where inote <> '';
+
+-- Ограничения размеров, чтобы в базу нельзя было записать мусор огромного объёма.
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'profiles_size_chk') then
+    alter table public.profiles add constraint profiles_size_chk check (
+      char_length(name) <= 100 and pg_column_size(phone) < 400 and pg_column_size(addr) < 2000
+      and cardinality(wallet) <= 50);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'products_photo_chk') then
+    alter table public.products add constraint products_photo_chk check (char_length(photo) < 1500000);
+  end if;
+end $$;
 
 -- ============ Права доступа (RLS) ============
 alter table public.profiles   enable row level security;
@@ -153,6 +175,7 @@ alter table public.delivery   enable row level security;
 alter table public.coupons    enable row level security;
 alter table public.settings   enable row level security;
 alter table public.orders     enable row level security;
+alter table public.order_notes enable row level security;
 
 -- Профили: каждый видит и правит свой, админ видит и правит всех.
 drop policy if exists profiles_read on public.profiles;
@@ -193,6 +216,8 @@ drop policy if exists orders_admin on public.orders;
 create policy orders_admin on public.orders for update using (public.is_admin()) with check (public.is_admin());
 drop policy if exists orders_admin_del on public.orders;
 create policy orders_admin_del on public.orders for delete using (public.is_admin());
+drop policy if exists order_notes_admin on public.order_notes;
+create policy order_notes_admin on public.order_notes for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============ Проверка купона ============
 -- Возвращает {ok:true, code, discount} или {ok:false, key, v}; ключи совпадают с переводами на сайте.
@@ -226,12 +251,18 @@ declare
   it jsonb; pr public.products; m public.materials; dl public.delivery;
   items jsonb := '[]'; sub int := 0; unit int; q int;
   cp jsonb; disc int := 0; ref text; o public.orders;
-  v_name text := trim(coalesce(p->>'name', ''));
+  v_name text := left(trim(coalesce(p->>'name', '')), 100);
+  v_digits text := regexp_replace(coalesce(p->'phone'->>'digits', p->'phone'->>'num', ''), '\D', '', 'g');
   v_addr text := trim(coalesce(p->>'addr', ''));
 begin
   if length(v_name) < 2 then raise exception 'e_name'; end if;
-  if p->'phone' is null or length(regexp_replace(coalesce(p->'phone'->>'digits', p->'phone'->>'num', ''), '\D', '', 'g')) <> 9 then
+  if p->'phone' is null or length(v_digits) <> 9 or pg_column_size(p->'phone') > 400 then
     raise exception 'e_phone'; end if;
+  -- Защита от спама: не больше 5 заказов с одного телефона в час и 30 заказов на весь магазин за 10 минут.
+  if (select count(*) from public.orders where created_at > now() - interval '10 minutes') >= 30
+     or (select count(*) from public.orders where created_at > now() - interval '1 hour'
+           and regexp_replace(coalesce(phone->>'digits', phone->>'num', ''), '\D', '', 'g') = v_digits) >= 5 then
+    raise exception 'rate_limit'; end if;
   if jsonb_typeof(p->'items') <> 'array' or jsonb_array_length(p->'items') = 0 then raise exception 'empty'; end if;
   if jsonb_array_length(p->'items') > 50 then raise exception 'too_many'; end if;
 
@@ -332,6 +363,7 @@ grant insert, update, delete on public.categories, public.materials, public.colo
 grant select on public.coupons, public.orders, public.profiles to authenticated;
 grant update on public.profiles, public.orders to authenticated;
 grant delete on public.orders to authenticated;
+grant select, insert, update, delete on public.order_notes to authenticated;
 
 revoke all on function public.place_order(jsonb) from public;
 grant execute on function public.place_order(jsonb) to anon, authenticated;

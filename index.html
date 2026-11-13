@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="TOFA3D Studio: kész 3D nyomtatott tárgyak. Átvétel Tabon és Siófokon, csomagpont, házhoz szállítás.">
 <meta name="theme-color" content="#0a0a0f">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://suxnqplokgmxjmviazfr.supabase.co wss://suxnqplokgmxjmviazfr.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -15,8 +17,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="vendor/three-r128.min.js"></script>
+<script src="vendor/supabase-js-2.45.4.js"></script>
 <style>
 /* Layout: a shop window with a print-bed viewer. Hero shows one product being built layer by layer, the catalog is the body.
    Account and admin are plain, dense work views reached by hash (#account, #admin). Dark-first like the old site (#0a0a0f). */
@@ -421,7 +423,7 @@ const MAP = {
   coupons:{from:r => ({code:r.code, type:r.type, value:r.value, min:r.min, expires:r.expires || '', maxUses:r.max_uses, used:r.used, oncePerUser:r.once_per_user, active:r.active, grant:r.grant}),
            to:c => ({code:c.code, type:c.type, value:c.value, min:c.min || 0, expires:c.expires || null, max_uses:c.maxUses || 0, once_per_user:!!c.oncePerUser, active:!!c.active, grant:!!c.grant})},
   orders:{from:r => ({ref:r.ref, ts:Date.parse(r.created_at), userId:r.user_id, name:r.name, phone:r.phone, mail:r.mail, tg:r.tg, note:r.note, addr:r.addr, delivery:r.delivery,
-                     items:r.items, subtotal:r.subtotal, discount:r.discount, coupon:r.coupon, total:r.total, status:r.status, history:r.history || [], inote:r.inote || ''})},
+                     items:r.items, subtotal:r.subtotal, discount:r.discount, coupon:r.coupon, total:r.total, status:r.status, history:r.history || [], inote:''})},
   profiles:{from:r => ({id:r.id, name:r.name || '', email:r.email || '', phone:r.phone, addr:r.addr || {delivery:'', text:''}, role:r.role, coupons:r.wallet || [], created:Date.parse(r.created_at)})}
 };
 const bySort = (x, y) => (x.sort || 0) - (y.sort || 0);
@@ -444,6 +446,8 @@ async function loadMe(){
   if(adminOn){
     const [k, u] = await Promise.all([q(sb.from('coupons').select('*').order('code')), q(sb.from('profiles').select('*').order('created_at', {ascending:false}))]);
     C.coupons = k.map(MAP.coupons.from); C.users = u.map(MAP.profiles.from);
+    const notes = await q(sb.from('order_notes').select('*')), nm = {}; notes.forEach(n => nm[n.ref] = n.note);
+    C.orders.forEach(o => o.inote = nm[o.ref] || '');
   } else { C.coupons = C.myCoupons; C.users = [ME]; }
 }
 async function loadAll(){ await loadMe(); await loadPublic(); }
@@ -468,10 +472,6 @@ const deliveries = () => C.delivery;
 const settings = () => Object.assign({}, SEED_SETTINGS, C.settings);
 const prod = id => products().find(p => p.id === id);
 const activeProducts = () => products().filter(p => p.active);
-async function hash(s){
-  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('pl:' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
-  catch(e){ return 'b64:' + btoa(unescape(encodeURIComponent('pl:' + s))); }
-}
 const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
 
 /* ---------- i18n (shop) ---------- */
@@ -494,7 +494,7 @@ hu:{
  ct_title:'Kosár',ct_empty:'A kosár üres.',ct_remove:'Törlés',ct_delivery:'Átvétel',ct_total:'Végösszeg',ct_next:'Tovább a megrendeléshez',
  co_name:'Név',co_country:'Ország',co_phone:'Telefon',co_email:'E-mail (nem kötelező)',co_tg:'Telegram (nem kötelező)',co_addr:'Cím vagy csomagpont',co_note:'Megjegyzés',co_submit:'Megrendelés elküldése',
  e_name:'Add meg a neved.',e_phone:'A telefonszám 9 számjegy legyen.',e_email:'Érvénytelen e-mail cím.',e_addr:'Add meg a címet vagy a csomagpontot.',
- co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
+ co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',e_rate:'Túl sok rendelés rövid idő alatt. Próbáld újra később, vagy írj nekünk.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
  co_sub:'Részösszeg',co_disc:'Kedvezmény',co_fee:'Szállítás',co_guest:'Hozz létre fiókot, hogy követhesd a rendeléseidet.',co_login_hint:'Belépve a rendelésed követhető a fiókodban.',co_myacc:'Fiókom megnyitása',
  col:{graphite:'Grafit',white:'Fehér',orange:'Narancs',blue:'Kék',green:'Zöld',red:'Piros',grey:'Szürke'},
  acc_login:'Belépés',acc_my:'Fiókom',acc_logout:'Kilépés',acc_hello:'Szia',
@@ -527,7 +527,7 @@ en:{
  ct_title:'Cart',ct_empty:'Your cart is empty.',ct_remove:'Remove',ct_delivery:'Delivery',ct_total:'Total',ct_next:'Continue to checkout',
  co_name:'Name',co_country:'Country',co_phone:'Phone',co_email:'Email (optional)',co_tg:'Telegram (optional)',co_addr:'Address or parcel point',co_note:'Comment',co_submit:'Place order',
  e_name:'Enter your name.',e_phone:'Phone must have 9 digits.',e_email:'Invalid email address.',e_addr:'Enter an address or parcel point.',
- co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
+ co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',e_rate:'Too many orders in a short time. Please try again later or contact us.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
  co_sub:'Subtotal',co_disc:'Discount',co_fee:'Delivery',co_guest:'Create an account to track your orders.',co_login_hint:'Signed in: you can track this order in your account.',co_myacc:'Open my account',
  col:{graphite:'Graphite',white:'White',orange:'Orange',blue:'Blue',green:'Green',red:'Red',grey:'Grey'},
  acc_login:'Sign in',acc_my:'My account',acc_logout:'Sign out',acc_hello:'Hi',
@@ -560,7 +560,7 @@ ru:{
  ct_title:'Корзина',ct_empty:'Корзина пуста.',ct_remove:'Удалить',ct_delivery:'Получение',ct_total:'Итого',ct_next:'К оформлению',
  co_name:'Имя',co_country:'Страна',co_phone:'Телефон',co_email:'Email (необязательно)',co_tg:'Telegram (необязательно)',co_addr:'Адрес или пункт выдачи',co_note:'Комментарий',co_submit:'Отправить заказ',
  e_name:'Введи имя.',e_phone:'В номере должно быть 9 цифр.',e_email:'Некорректный email.',e_addr:'Укажи адрес или пункт выдачи.',
- co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
+ co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',e_rate:'Слишком много заказов за короткое время. Попробуй позже или напиши нам.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
  co_sub:'Сумма товаров',co_disc:'Скидка',co_fee:'Доставка',co_guest:'Создай аккаунт, чтобы следить за заказами.',co_login_hint:'Ты вошёл: заказ будет виден в кабинете.',co_myacc:'Открыть кабинет',
  col:{graphite:'Графит',white:'Белый',orange:'Оранжевый',blue:'Синий',green:'Зелёный',red:'Красный',grey:'Серый'},
  acc_login:'Войти',acc_my:'Кабинет',acc_logout:'Выйти',acc_hello:'Привет',
@@ -866,11 +866,11 @@ function renderCatalog(){
   $('#products').innerHTML = list.map(p => {
     const s = ps(p.id);
     return `<article class="card" data-p="${esc(p.id)}">
-      <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" ${p.photo ? 'src="' + p.photo + '"' : ''}></button>
+      <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" ${p.photo ? 'src="' + esc(p.photo) + '"' : ''}></button>
       <div class="bd">
         <div><div class="tagline">${esc(cmap[p.cat] ? L(cmap[p.cat].name) : '')}</div><h3>${esc(L(p.name))}</h3></div>
         <div class="meta"><span class="small mono">${dimText(p.shape)}</span><span class="pr">${fmt(unitPrice(p, s.mat))}</span></div>
-        <div class="dots">${pColors(p).map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(colName(c.id))}" title="${esc(colName(c.id))}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
+        <div class="dots">${pColors(p).map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${esc(c.id)}" style="background:${esc(c.hex)}" aria-label="${esc(colName(c.id))}" title="${esc(colName(c.id))}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
         <div class="btns"><button class="btn sm" data-act="open-prod" data-id="${esc(p.id)}">${esc(t('c_details'))}</button><button class="btn primary sm" data-act="card-add" data-id="${esc(p.id)}">${esc(t('c_add'))}</button></div>
       </div></article>`;
   }).join('');
@@ -884,7 +884,7 @@ function paintThumb(p){
 function renderMaterials(){
   const bar = n => `<span class="bar" aria-label="${n}/5">${[1,2,3,4,5].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
   $('#matTable').innerHTML = `<thead><tr><th>${t('m_name')}</th><th>${t('m_strength')}</th><th>${t('m_heat')}</th><th>${t('m_flex')}</th><th>${t('m_use')}</th><th>${t('m_extra')}</th></tr></thead><tbody>` +
-    mats().map(m => `<tr><td class="nm">${m.id}</td><td>${bar(m.S)}</td><td>${bar(m.H)} <span class="small mono">~${m.temp}°C</span></td><td>${bar(m.F)}</td><td>${esc(L(m.use))}</td><td class="mono">${m.pct ? '+' + m.pct + '%' : '–'}</td></tr>`).join('') + '</tbody>';
+    mats().map(m => `<tr><td class="nm">${esc(m.id)}</td><td>${bar(m.S)}</td><td>${bar(m.H)} <span class="small mono">~${m.temp}°C</span></td><td>${bar(m.F)}</td><td>${esc(L(m.use))}</td><td class="mono">${m.pct ? '+' + m.pct + '%' : '–'}</td></tr>`).join('') + '</tbody>';
 }
 function renderStatic(){
   const s = settings();
@@ -947,7 +947,7 @@ function openProduct(id){
   $('#prodOv').hidden = false;
   if(MV){ MV.destroy(); MV = null; }
   if(BUILD[p.shape]){ $('#mView').innerHTML = viewerMarkup(''); MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color)); }
-  else $('#mView').innerHTML = p.photo ? `<img alt="${esc(L(p.name))}" src="${p.photo}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">` : '';
+  else $('#mView').innerHTML = p.photo ? `<img alt="${esc(L(p.name))}" src="${esc(p.photo)}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">` : '';
   renderModalInfo();
 }
 function closeProduct(){ if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
@@ -958,8 +958,8 @@ function renderModalInfo(){
   $('#pCat').textContent = cat ? L(cat.name) : '';
   $('#mInfo').innerHTML = `
     <div><h2 id="pName">${esc(L(p.name))}</h2><p class="desc" style="margin-top:8px">${esc(L(p.desc))}</p></div>
-    <div><div class="lbl">${t('md_material')}</div><div class="chips">${pMats(p).map(m => `<button class="opt" data-act="m-mat" data-mat="${m.id}" aria-pressed="${M.mat === m.id}">${m.id}</button>`).join('')}</div></div>
-    <div><div class="lbl"><span>${t('md_color')}</span><span>${esc(colName(M.color))}</span></div><div class="dots">${pColors(p).map(c => `<button class="dot" data-act="m-color" data-color="${c.id}" style="background:${c.hex}" aria-label="${esc(colName(c.id))}" aria-pressed="${M.color === c.id}"></button>`).join('')}</div></div>
+    <div><div class="lbl">${t('md_material')}</div><div class="chips">${pMats(p).map(m => `<button class="opt" data-act="m-mat" data-mat="${esc(m.id)}" aria-pressed="${M.mat === m.id}">${esc(m.id)}</button>`).join('')}</div></div>
+    <div><div class="lbl"><span>${t('md_color')}</span><span>${esc(colName(M.color))}</span></div><div class="dots">${pColors(p).map(c => `<button class="dot" data-act="m-color" data-color="${esc(c.id)}" style="background:${esc(c.hex)}" aria-label="${esc(colName(c.id))}" aria-pressed="${M.color === c.id}"></button>`).join('')}</div></div>
     <div class="row2"><div><div class="lbl">${t('md_qty')}</div><div class="num"><button data-act="m-qty" data-d="-1" aria-label="-">−</button><input id="mQty" data-on="mqty" value="${M.qty}" inputmode="numeric" aria-label="${t('md_qty')}"><button data-act="m-qty" data-d="1" aria-label="+">+</button></div></div></div>
     <div class="kv"><div><span>${t('md_size')}</span><span class="mono">${dimText(p.shape)}</span></div><div><span>${t('md_layer')}</span><span class="mono">${String(LAYER).replace('.', ',')} mm</span></div><div><span>${t('md_lead')}</span><span class="mono">${st.leadMin}–${st.leadMax} ${t('days')}</span></div></div>
     <div><div class="total"><span class="small">${t('md_total')}${M.qty > 1 ? ' · ' + fmt(unit) + ' × ' + M.qty : ''}</span><b>${fmt(unit * M.qty)}</b></div><button class="btn primary" data-act="m-add" style="width:100%">${t('c_add')}</button></div>`;
@@ -1060,7 +1060,7 @@ async function submitOrder(){
     console.error(e); busy = false; if(btn) btn.disabled = false;
     const m = String(e.message || ''), k = m.startsWith('coupon:') ? m.slice(7) : '';
     if(k){ cpCode = ''; CP = null; cpMsg = {bad:true, key:k}; renderCart('cart'); return; }
-    toast(t('e_order')); return;
+    toast(t(m === 'rate_limit' ? 'e_rate' : 'e_order')); return;
   }
   busy = false;
   const o = MAP.orders.from(r);
@@ -1285,7 +1285,7 @@ function setOrderStatus(ref, status, inote){
   const o = orders().find(x => x.ref === ref); if(!o) return;
   return save(async () => {
     if(o.status !== status) await q(sb.rpc('set_order_status', {p_ref:ref, p_status:status}));
-    if(inote != null && inote !== o.inote) await q(sb.from('orders').update({inote}).eq('ref', ref));
+    if(inote != null && inote !== o.inote) await q(sb.from('order_notes').upsert({ref, note:inote}));
   });
 }
 function productDialog(id){
@@ -1299,7 +1299,7 @@ function productDialog(id){
     <div><div class="lbl">${a('p_colors')}</div><div class="chips">${colors().map(c => `<label class="ck"><input type="checkbox" class="pc" value="${esc(c.id)}" ${!p || !(p.colors || []).length || p.colors.includes(c.id) ? 'checked' : ''}> <span class="thumb" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${esc(c.hex)};border:1px solid var(--line)"></span>${esc(L(c.name, alang))}</label>`).join('')}</div></div>
     <label class="ck"><input type="checkbox" id="pfActive" ${!p || p.active ? 'checked' : ''}> ${a('p_active')}</label>
     <label class="f">${a('p_photo')}<input class="inp" id="pfPhoto" type="file" accept="image/*" data-on="photo"></label>
-    <div id="pfPrev">${p && p.photo ? `<img class="thumb" style="width:96px;height:72px" src="${p.photo}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>` : ''}</div>
+    <div id="pfPrev">${p && p.photo ? `<img class="thumb" style="width:96px;height:72px" src="${esc(p.photo)}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>` : ''}</div>
     <p id="pfErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`, true);
   dlgPhoto = p ? p.photo : '';
 }
