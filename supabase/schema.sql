@@ -86,12 +86,15 @@ create table if not exists public.products (
   name        jsonb not null,
   descr       jsonb not null default '{}',
   active      boolean not null default true,
-  photo       text not null default '',
+  photo       text not null default '',   -- старое поле (одно фото в base64), заменено на photos
+  photos      jsonb not null default '[]',  -- [{u: полное фото, t: миниатюра, k: путь в Storage}]
   mats        text[],                -- пусто = все материалы
   colors      text[],                -- пусто = все цвета
   sort        int not null default 0,
   created_at  timestamptz not null default now()
 );
+
+alter table public.products add column if not exists photos jsonb not null default '[]';
 
 create table if not exists public.delivery (
   id       text primary key,
@@ -163,6 +166,9 @@ do $$ begin
   end if;
   if not exists (select 1 from pg_constraint where conname = 'products_photo_chk') then
     alter table public.products add constraint products_photo_chk check (char_length(photo) < 1500000);
+  end if;
+  if not exists (select 1 from pg_constraint where conname = 'products_photos_chk') then
+    alter table public.products add constraint products_photos_chk check (jsonb_typeof(photos) = 'array' and jsonb_array_length(photos) <= 12 and pg_column_size(photos) < 20000);
   end if;
 end $$;
 
@@ -373,3 +379,23 @@ grant execute on function public.set_order_status(text, text) to authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
 grant execute on function public.my_coupons() to authenticated;
 grant execute on function public.add_coupon(text) to authenticated;
+
+-- ============ Фото товаров (Supabase Storage) ============
+-- Публичная корзина «products»: смотреть фото может любой, загружать и удалять только админ.
+do $$
+begin
+  if exists (select 1 from information_schema.schemata where schema_name = 'storage') then
+    insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    values ('products', 'products', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+    on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+    drop policy if exists products_img_read on storage.objects;
+    create policy products_img_read on storage.objects for select using (bucket_id = 'products');
+    drop policy if exists products_img_insert on storage.objects;
+    create policy products_img_insert on storage.objects for insert to authenticated with check (bucket_id = 'products' and public.is_admin());
+    drop policy if exists products_img_update on storage.objects;
+    create policy products_img_update on storage.objects for update to authenticated using (bucket_id = 'products' and public.is_admin());
+    drop policy if exists products_img_delete on storage.objects;
+    create policy products_img_delete on storage.objects for delete to authenticated using (bucket_id = 'products' and public.is_admin());
+  end if;
+end $$;

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="TOFA3D Studio: kész 3D nyomtatott tárgyak. Átvétel Tabon és Siófokon, csomagpont, házhoz szállítás.">
 <meta name="theme-color" content="#0a0a0f">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://suxnqplokgmxjmviazfr.supabase.co wss://suxnqplokgmxjmviazfr.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://suxnqplokgmxjmviazfr.supabase.co; connect-src 'self' https://suxnqplokgmxjmviazfr.supabase.co wss://suxnqplokgmxjmviazfr.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="google" content="notranslate">
 <script>
@@ -144,6 +144,18 @@ section.sec{padding-block:72px 0}
 .card.more:hover{border-color:var(--accent)}
 .more-in{display:grid;gap:6px;justify-items:center;text-align:center;padding:20px}.more-in b{font-size:17px}.more-in .arr{font-size:28px;color:var(--accent)}
 .chk-list{display:grid;gap:6px;max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:10px}
+.gal{display:grid;gap:8px}
+.gal-main{aspect-ratio:4/3;background:var(--surface-2);border-radius:10px;overflow:hidden;position:relative}
+.gal-main .viewer, .gal-main>div:not(.gal-strip){height:100%}
+.gal-strip{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}.gal-strip::-webkit-scrollbar{display:none}
+.gal-strip img{flex:0 0 100%;width:100%;height:100%;object-fit:contain;scroll-snap-align:center;background:var(--surface-2)}
+.gal-thumbs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.gal-th{flex:0 0 56px;height:56px;border:1px solid var(--line);border-radius:8px;overflow:hidden;padding:0;background:var(--surface-2);color:var(--fg);cursor:pointer;font:600 13px var(--font-mono)}
+.gal-th img{width:100%;height:100%;object-fit:cover;display:block}.gal-th[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.phmgr{display:flex;flex-wrap:wrap;gap:10px}
+.phitem{position:relative;width:120px;display:grid;gap:4px}.phitem img{width:120px;height:90px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block}
+.phmain{position:absolute;top:4px;left:4px;background:var(--accent);color:var(--accent-ink);font:600 10px var(--font-mono);padding:2px 6px;border-radius:4px;text-transform:uppercase}
+.phbtns{display:flex;gap:4px}.phbtns .btn.icon{width:30px;height:28px;min-height:0}
 .cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -443,8 +455,8 @@ let ME = null;
 async function q(p){ const r = await p; if(r.error) throw r.error; return r.data; }
 const nz = a => Array.isArray(a) && a.length ? a : null;
 const MAP = {
-  products:{from:r => ({id:r.id, shape:r.shape || '', cat:r.cat, price:r.price, name:r.name, desc:r.descr || {}, active:r.active, photo:r.photo || '', mats:r.mats || [], colors:r.colors || [], sort:r.sort || 0}),
-            to:p => ({id:p.id, shape:p.shape || null, cat:p.cat || null, price:p.price, name:p.name, descr:p.desc || {}, active:!!p.active, photo:p.photo || '', mats:nz(p.mats), colors:nz(p.colors), sort:p.sort || 0})},
+  products:{from:r => ({id:r.id, shape:r.shape || '', cat:r.cat, price:r.price, name:r.name, desc:r.descr || {}, active:r.active, photo:r.photo || '', photos:Array.isArray(r.photos) ? r.photos : [], mats:r.mats || [], colors:r.colors || [], sort:r.sort || 0}),
+            to:p => ({id:p.id, shape:p.shape || null, cat:p.cat || null, price:p.price, name:p.name, descr:p.desc || {}, active:!!p.active, photo:p.photo || '', photos:p.photos || [], mats:nz(p.mats), colors:nz(p.colors), sort:p.sort || 0})},
   materials:{from:r => ({id:r.id, pct:+r.pct, S:r.s, H:r.h, F:r.f, temp:r.temp, use:r.use || {}, sort:r.sort || 0}),
              to:m => ({id:m.id, pct:m.pct, s:m.S, h:m.H, f:m.F, temp:m.temp, use:m.use || {}, sort:m.sort || 0})},
   colors:{from:r => ({id:r.id, hex:r.hex, name:r.name, sort:r.sort || 0}), to:c => ({id:c.id, hex:c.hex, name:c.name, sort:c.sort || 0})},
@@ -456,6 +468,7 @@ const MAP = {
                      items:r.items, subtotal:r.subtotal, discount:r.discount, coupon:r.coupon, total:r.total, status:r.status, history:r.history || [], inote:''})},
   profiles:{from:r => ({id:r.id, name:r.name || '', email:r.email || '', phone:r.phone, addr:r.addr || {delivery:'', text:''}, role:r.role, coupons:r.wallet || [], created:Date.parse(r.created_at)})}
 };
+const photosOf = p => p && p.photos && p.photos.length ? p.photos : p && p.photo ? [{u:p.photo, t:p.photo, legacy:true}] : [];
 const bySort = (x, y) => (x.sort || 0) - (y.sort || 0);
 async function loadPublic(){
   const [p, c, m, co, d, st] = await Promise.all([
@@ -615,7 +628,7 @@ ru:{
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
- p_shape:'Модель (3D-форма)',p_name:'Название',p_desc:'Описание',p_cat:'Категория',p_price:'Цена, Ft',p_active:'Показывать в каталоге',p_photo:'Фото товара',p_photo_rm:'Убрать фото',p_new:'Новый товар',p_name_req:'Заполни название хотя бы на одном языке.',p_price_req:'Укажи цену больше 0.',p_hidden:'скрыт',p_photo_big:'Фото слишком большое для хранилища браузера.',
+ p_shape:'Модель (3D-форма)',p_name:'Название',p_desc:'Описание',p_cat:'Категория',p_price:'Цена, Ft',p_active:'Показывать в каталоге',p_photo:'Фото товара',p_photos:'Фотографии (первое — главное, до 12)',p_photo_add:'+ Добавить фото',p_photo_hint:'JPG, PNG или WebP. Фото уменьшаются до 1600 px перед загрузкой.',p_photo_main:'главное',p_photo_none:'Фото нет: в каталоге будет 3D-модель (если есть) или пустая карточка.',p_photo_bad:'Не удалось прочитать файл.',p_uploading:'Загрузка…',p_photo_rm:'Убрать фото',p_new:'Новый товар',p_name_req:'Заполни название хотя бы на одном языке.',p_price_req:'Укажи цену больше 0.',p_hidden:'скрыт',p_photo_big:'Фото слишком большое для хранилища браузера.',
  c_new:'Новая категория',c_name:'Название',c_in_use:'В категории есть товары, удалить нельзя.',c_cnt:'Товаров',
  u_name:'Имя',u_email:'Email',u_orders:'Заказы',u_reg:'Регистрация',u_reset:'Сменить пароль',u_newpass:'Новый пароль (мин. 6)',u_show:'Заказы',u_none:'Клиентов пока нет.',u_pass_min:'Минимум 6 символов.',
  k_code:'Код',k_type:'Тип',k_pct:'Процент',k_fix:'Сумма, Ft',k_val:'Значение',k_min:'Мин. сумма заказа, Ft',k_exp:'Действует до',k_max:'Лимит использований (0 = без лимита)',k_once:'Один раз на клиента',k_grant:'Выдавать новым клиентам при регистрации',k_active:'Активен',k_used:'Использован',k_dup:'Такой код уже есть.',k_new:'Новый купон',k_bad:'Заполни код и значение.',k_on:'Вкл',k_off:'Выкл',
@@ -630,7 +643,7 @@ hu:{
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
- p_shape:'Modell (3D forma)',p_name:'Név',p_desc:'Leírás',p_cat:'Kategória',p_price:'Ár, Ft',p_active:'Megjelenik a katalógusban',p_photo:'Termékfotó',p_photo_rm:'Fotó törlése',p_new:'Új termék',p_name_req:'Adj meg nevet legalább egy nyelven.',p_price_req:'Adj meg 0-nál nagyobb árat.',p_hidden:'rejtett',p_photo_big:'A fotó túl nagy a böngésző tárolójához.',
+ p_shape:'Modell (3D forma)',p_name:'Név',p_desc:'Leírás',p_cat:'Kategória',p_price:'Ár, Ft',p_active:'Megjelenik a katalógusban',p_photo:'Termékfotó',p_photos:'Fotók (az első a fő kép, max. 12)',p_photo_add:'+ Fotó hozzáadása',p_photo_hint:'JPG, PNG vagy WebP. Feltöltés előtt 1600 px-re kicsinyítjük.',p_photo_main:'fő kép',p_photo_none:'Nincs fotó: a katalógusban a 3D modell látszik (ha van), vagy üres kártya.',p_photo_bad:'A fájlt nem sikerült beolvasni.',p_uploading:'Feltöltés…',p_photo_rm:'Fotó törlése',p_new:'Új termék',p_name_req:'Adj meg nevet legalább egy nyelven.',p_price_req:'Adj meg 0-nál nagyobb árat.',p_hidden:'rejtett',p_photo_big:'A fotó túl nagy a böngésző tárolójához.',
  c_new:'Új kategória',c_name:'Név',c_in_use:'A kategóriában vannak termékek, nem törölhető.',c_cnt:'Termék',
  u_name:'Név',u_email:'E-mail',u_orders:'Rendelések',u_reg:'Regisztráció',u_reset:'Jelszócsere',u_newpass:'Új jelszó (min. 6)',u_show:'Rendelések',u_none:'Még nincs ügyfél.',u_pass_min:'Legalább 6 karakter.',
  k_code:'Kód',k_type:'Típus',k_pct:'Százalék',k_fix:'Összeg, Ft',k_val:'Érték',k_min:'Min. rendelési érték, Ft',k_exp:'Érvényes eddig',k_max:'Felhasználási limit (0 = nincs)',k_once:'Ügyfelenként egyszer',k_grant:'Új ügyfeleknek regisztrációkor',k_active:'Aktív',k_used:'Felhasználva',k_dup:'Ilyen kód már van.',k_new:'Új kupon',k_bad:'Add meg a kódot és az értéket.',k_on:'Be',k_off:'Ki',
@@ -892,7 +905,7 @@ function renderChips(){
 function cardHTML(p, cmap){
   const s = ps(p.id);
   return `<article class="card" data-p="${esc(p.id)}">
-      <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" ${p.photo ? 'src="' + esc(p.photo) + '"' : ''}></button>
+      <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" loading="lazy" ${photosOf(p).length ? 'src="' + esc(photosOf(p)[0].t) + '"' : ''}></button>
       <div class="bd">
         <div><div class="tagline">${esc(cmap[p.cat] ? L(cmap[p.cat].name) : '')}</div><h3>${esc(L(p.name))}</h3></div>
         <div class="meta"><span class="small mono">${dimText(p.shape)}</span><span class="pr">${fmt(unitPrice(p, s.mat))}</span></div>
@@ -943,7 +956,7 @@ function railArrows(){
 }
 window.addEventListener('resize', () => { clearTimeout(railArrows._t); railArrows._t = setTimeout(railArrows, 150); });
 function paintThumb(p){
-  if(p.photo) return;
+  if(photosOf(p).length) return;
   const imgs = $$(`[data-p="${CSS.escape(p.id)}"] .ph img`); if(!imgs.length) return;
   const url = thumbOf(p.shape, ps(p.id).color);
   imgs.forEach(img => { if(url) img.src = url; else img.style.visibility = 'hidden'; });
@@ -1013,10 +1026,34 @@ function openProduct(id){
   const s = ps(id); M = {id, mat:s.mat, color:s.color, qty:1};
   $('#prodOv').hidden = false;
   if(MV){ MV.destroy(); MV = null; }
-  if(BUILD[p.shape]){ $('#mView').innerHTML = viewerMarkup(''); MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color)); }
-  else $('#mView').innerHTML = p.photo ? `<img alt="${esc(L(p.name))}" src="${esc(p.photo)}" style="display:block;width:100%;aspect-ratio:4/3;object-fit:cover">` : '';
+  const ph = photosOf(p), has3d = !!BUILD[p.shape];
+  if(!ph.length){
+    if(has3d){ $('#mView').innerHTML = viewerMarkup(''); MV = createViewer($('#mView')); MV.setProduct(p.shape, colHex(M.color)); }
+    else $('#mView').innerHTML = '';
+  } else {
+    $('#mView').innerHTML = `<div class="gal"><div class="gal-main" id="galMain"></div>
+      ${ph.length > 1 || has3d ? `<div class="gal-thumbs">${ph.map((x, i) => `<button class="gal-th" data-act="gal" data-i="${i}" aria-label="${i + 1} / ${ph.length}"><img src="${esc(x.t)}" alt=""></button>`).join('')}
+        ${has3d ? `<button class="gal-th gal-3d" data-act="gal" data-i="3d">3D</button>` : ''}</div>` : ''}</div>`;
+    galShow(0);
+  }
   renderModalInfo();
 }
+function galShow(i){
+  const p = M && prod(M.id); if(!p) return;
+  const ph = photosOf(p), main = $('#galMain'); if(!main) return;
+  if(i === '3d'){
+    if(!MV){ main.innerHTML = viewerMarkup(''); MV = createViewer(main); MV.setProduct(p.shape, colHex(M.color)); }
+  } else {
+    if(MV){ MV.destroy(); MV = null; }
+    if(!main.querySelector('.gal-strip')){
+      main.innerHTML = `<div class="gal-strip" id="galStrip">${ph.map((x, k) => `<img src="${esc(x.u)}" alt="${esc(L(p.name))} ${k + 1}" ${k ? 'loading="lazy"' : ''}>`).join('')}</div>`;
+      const st = $('#galStrip'); st.addEventListener('scroll', () => { const k = Math.round(st.scrollLeft / Math.max(1, st.clientWidth)); galMark(k); }, {passive:true});
+    }
+    const st = $('#galStrip'); st.scrollTo({left:st.clientWidth * i, behavior:'auto'});
+  }
+  galMark(i);
+}
+function galMark(i){ $$('#mView .gal-th').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.i === String(i)))); }
 function closeProduct(){ if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
 function renderModalInfo(){
   if(!M) return;
@@ -1280,7 +1317,7 @@ function renderAdmin(){
   } else if(adm.tab === 'products'){
     body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="p-edit" data-id="">${a('add')}</button></div>
       <div class="tablewrap"><table><thead><tr><th></th><th>${a('p_name')}</th><th>${a('p_cat')}</th><th class="r">${a('p_price')}</th><th></th></tr></thead><tbody>
-      ${products().map(p => { const th = p.photo || thumbOf(p.shape, 'orange'); return `<tr><td>${th ? `<img class="thumb" src="${th}" alt="">` : '<span class="thumb"></span>'}</td>
+      ${products().map(p => { const th = (photosOf(p)[0] || {}).t || thumbOf(p.shape, 'orange'); return `<tr><td>${th ? `<img class="thumb" src="${esc(th)}" alt="">` : '<span class="thumb"></span>'}</td>
         <td>${esc(L(p.name, alang))} ${p.active ? '' : `<span class="st off">${a('p_hidden')}</span>`}</td><td>${esc(cmap[p.cat] ? L(cmap[p.cat].name, alang) : '–')}</td><td class="r mono">${fmt(p.price)}</td>
         <td><div class="rowbtns"><button class="btn sm" data-act="p-edit" data-id="${esc(p.id)}">${a('edit')}</button><button class="btn sm danger" data-act="p-del" data-id="${esc(p.id)}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')}
       </tbody></table></div>`;
@@ -1383,20 +1420,49 @@ function productDialog(id){
     <div><div class="lbl">${a('p_mats')}</div><div class="chips">${mats().map(m => `<label class="ck"><input type="checkbox" class="pm" value="${esc(m.id)}" ${!p || !(p.mats || []).length || p.mats.includes(m.id) ? 'checked' : ''}> ${esc(m.id)}</label>`).join('')}</div></div>
     <div><div class="lbl">${a('p_colors')}</div><div class="chips">${colors().map(c => `<label class="ck"><input type="checkbox" class="pc" value="${esc(c.id)}" ${!p || !(p.colors || []).length || p.colors.includes(c.id) ? 'checked' : ''}> <span class="thumb" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${esc(c.hex)};border:1px solid var(--line)"></span>${esc(L(c.name, alang))}</label>`).join('')}</div></div>
     <label class="ck"><input type="checkbox" id="pfActive" ${!p || p.active ? 'checked' : ''}> ${a('p_active')}</label>
-    <label class="f">${a('p_photo')}<input class="inp" id="pfPhoto" type="file" accept="image/*" data-on="photo"></label>
-    <div id="pfPrev">${p && p.photo ? `<img class="thumb" style="width:96px;height:72px" src="${esc(p.photo)}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>` : ''}</div>
+    <div><div class="lbl">${a('p_photos')}</div><div id="pfPhotos" class="phmgr"></div>
+      <label class="btn sm" style="margin-top:8px">${a('p_photo_add')}<input id="pfPhoto" type="file" accept="image/jpeg,image/png,image/webp" multiple data-on="photo" hidden></label>
+      <p class="small" style="margin-top:6px">${a('p_photo_hint')}</p></div>
     <p id="pfErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`, true);
-  dlgPhoto = p ? p.photo : '';
+  dlgPhotos = photosOf(p).map(x => Object.assign({}, x)); dlgRemoved = []; renderPhotoMgr();
 }
-let dlgPhoto = '';
+let dlgPhoto = '', dlgPhotos = [], dlgRemoved = [];
+function renderPhotoMgr(){
+  const el = $('#pfPhotos'); if(!el) return;
+  el.innerHTML = dlgPhotos.map((x, i) => `<div class="phitem"><img src="${esc(x.preview || x.t)}" alt="">${i === 0 ? `<span class="phmain">${a('p_photo_main')}</span>` : ''}
+    <div class="phbtns"><button type="button" class="btn sm icon" data-act="ph-move" data-i="${i}" data-d="-1" ${i ? '' : 'disabled'} aria-label="←">←</button><button type="button" class="btn sm icon" data-act="ph-move" data-i="${i}" data-d="1" ${i < dlgPhotos.length - 1 ? '' : 'disabled'} aria-label="→">→</button><button type="button" class="btn sm icon danger" data-act="ph-rm" data-i="${i}" aria-label="${a('del')}">✕</button></div></div>`).join('') || `<p class="small">${a('p_photo_none')}</p>`;
+}
+const canvasBlob = (img, max, qual) => new Promise(res => {
+  const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+  c.toBlob(b => res(b), 'image/jpeg', qual);
+});
+/* file -> {full, thumb, preview}: JPEG 1600 px for the gallery and 600 px for cards */
 function readPhoto(file){
   return new Promise(res => {
-    const fr = new FileReader();
-    fr.onload = () => { const img = new Image(); img.onload = () => {
-      const k = Math.min(1, 640 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.82)); }; img.onerror = () => res(''); img.src = fr.result; };
-    fr.onerror = () => res(''); fr.readAsDataURL(file);
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = async () => { const full = await canvasBlob(img, 1600, 0.85), thumb = await canvasBlob(img, 600, 0.8); URL.revokeObjectURL(url);
+      res(full && thumb ? {full, thumb, preview:URL.createObjectURL(thumb)} : null); };
+    img.onerror = () => { URL.revokeObjectURL(url); res(null); };
+    img.src = url;
   });
+}
+const dataBlob = d => { const [h, b] = d.split(','), bin = atob(b), u = new Uint8Array(bin.length); for(let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], {type:(h.match(/data:([^;]+)/) || [])[1] || 'image/jpeg'}); };
+/* upload new photos to Storage, return final [{u,t,k}] in dialog order; delete removed ones */
+async function syncPhotos(pid){
+  const B = sb.storage.from('products'), out = [];
+  for(const x of dlgPhotos){
+    if(x.k){ out.push({u:x.u, t:x.t, k:x.k}); continue; }
+    let full = x.full, thumb = x.thumb;
+    if(x.legacy){ full = dataBlob(x.u); thumb = full; }
+    const k = pid + '/' + uid();
+    await q(B.upload(k + '.jpg', full, {contentType:'image/jpeg', cacheControl:'31536000', upsert:false}));
+    await q(B.upload(k + '_t.jpg', thumb, {contentType:'image/jpeg', cacheControl:'31536000', upsert:false}));
+    out.push({u:B.getPublicUrl(k + '.jpg').data.publicUrl, t:B.getPublicUrl(k + '_t.jpg').data.publicUrl, k});
+  }
+  if(dlgRemoved.length) await B.remove(dlgRemoved.flatMap(k => [k + '.jpg', k + '_t.jpg']));
+  return out;
 }
 function matDialog(id){
   const m = id ? mats().find(x => x.id === id) : null;
@@ -1531,8 +1597,11 @@ const ACT = {
   'ord-open':el => ordDialog(el.dataset.ref),
   'ord-del':el => { closeDlg(); save(() => q(sb.from('orders').delete().eq('ref', el.dataset.ref))); },
   'p-edit':el => productDialog(el.dataset.id),
-  'p-del':el => save(() => q(sb.from('products').delete().eq('id', el.dataset.id))),
-  'p-photo-rm':() => { dlgPhoto = ''; $('#pfPrev').innerHTML = ''; },
+  'p-del':el => { const p = prod(el.dataset.id), keys = (p && p.photos || []).filter(x => x.k).flatMap(x => [x.k + '.jpg', x.k + '_t.jpg']);
+    save(async () => { await q(sb.from('products').delete().eq('id', el.dataset.id)); if(keys.length) await sb.storage.from('products').remove(keys); }); },
+  'gal':el => galShow(el.dataset.i === '3d' ? '3d' : +el.dataset.i),
+  'ph-move':el => { const i = +el.dataset.i, j = i + (+el.dataset.d); if(j < 0 || j >= dlgPhotos.length) return; [dlgPhotos[i], dlgPhotos[j]] = [dlgPhotos[j], dlgPhotos[i]]; renderPhotoMgr(); },
+  'ph-rm':el => { const x = dlgPhotos.splice(+el.dataset.i, 1)[0]; if(x && x.k) dlgRemoved.push(x.k); if(x && x.preview) URL.revokeObjectURL(x.preview); renderPhotoMgr(); },
   'mt-edit':el => matDialog(el.dataset.id),
   'cl-edit':el => colorDialog(el.dataset.id),
   'mt-del':el => {
@@ -1593,7 +1662,10 @@ const INP = {
   hcat:el => { $('#hPick').innerHTML = homePickHTML(el.value, []); },
   mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
   ostatus:el => setOrderStatus(el.dataset.ref, el.value),
-  photo:async el => { const f = el.files[0]; if(!f) return; const url = await readPhoto(f); if(url){ dlgPhoto = url; $('#pfPrev').innerHTML = `<img class="thumb" style="width:96px;height:72px" src="${url}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>`; } }
+  photo:async el => {
+    const files = [...el.files].slice(0, Math.max(0, 12 - dlgPhotos.length)); el.value = '';
+    for(const f of files){ const r = await readPhoto(f); if(r) dlgPhotos.push(r); else msg('pfErr', a('p_photo_bad')); renderPhotoMgr(); }
+  },
 };
 ['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
   const on = e.target.dataset && e.target.dataset.on; if(!on || !INP[on]) return;
@@ -1639,9 +1711,14 @@ const FORMS = {
     const price = parseInt($('#pfPrice').value, 10); if(!(price > 0)) return msg('pfErr', a('p_price_req'));
     const pm = $$('#pForm .pm:checked').map(x => x.value), pc = $$('#pForm .pc:checked').map(x => x.value);
     if(!pm.length || !pc.length) return msg('pfErr', a('p_mc_req'));
-    const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:dlgPhoto || ''};
-    const row = MAP.products.to(Object.assign({id:id || 'p' + uid(), sort:old ? old.sort : products().length}, data));
-    save(() => q(sb.from('products').upsert(row)), () => { closeDlg(); renderAdmin(); });
+    const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:''};
+    const pid = id || 'p' + uid(), btn = $('#pForm .btn.primary');
+    if(btn){ btn.disabled = true; btn.textContent = a('p_uploading'); }
+    save(async () => {
+      try { data.photos = await syncPhotos(pid); }
+      catch(err){ if(btn){ btn.disabled = false; btn.textContent = a('save'); } throw err; }
+      await q(sb.from('products').upsert(MAP.products.to(Object.assign({id:pid, sort:old ? old.sort : products().length}, data))));
+    }, () => { closeDlg(); renderAdmin(); });
   },
   mtForm:e => {
     const old = e.target.dataset.id, id = old || $('#mtId').value.trim().toUpperCase().slice(0, 20), n = k => Math.max(0, parseInt($('#' + k).value, 10) || 0);
