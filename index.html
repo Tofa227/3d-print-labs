@@ -130,6 +130,21 @@ section.sec{padding-block:72px 0}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .opt{border:1px solid var(--line);background:var(--surface-2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;font-family:var(--font-mono)}
 .opt[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface-2))}
+.hrow{margin-top:26px}.hrow:first-child{margin-top:6px}
+.hrow-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.hrow-head h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px);line-height:1.1;text-wrap:balance}
+.hrow-nav{display:flex;align-items:center;gap:8px}.hrow-nav .link{margin-left:6px;white-space:nowrap;font-size:14px;color:var(--fg)}
+.btn.icon{width:36px;padding-left:0;padding-right:0}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 3 * 14px) / 4);gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0;padding-bottom:10px;overscroll-behavior-x:contain;scrollbar-width:thin}
+.rail>*{scroll-snap-align:start}
+@media (max-width:1040px){.rail{grid-auto-columns:calc((100% - 2 * 14px) / 3)}}
+@media (max-width:760px){.rail{grid-auto-columns:44%}.hrow-nav .btn.icon{display:none}}
+@media (max-width:460px){.rail{grid-auto-columns:68%}}
+.card.more{align-items:center;justify-content:center;text-decoration:none;color:inherit;background:var(--surface-2);border-style:dashed;min-height:240px}
+.card.more:hover{border-color:var(--accent)}
+.more-in{display:grid;gap:6px;justify-items:center;text-align:center;padding:20px}.more-in b{font-size:17px}.more-in .arr{font-size:28px;color:var(--accent)}
+.chk-list{display:grid;gap:6px;max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:10px}
+.cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:760px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -310,8 +325,12 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
     <input class="search" id="q" type="search" data-i18n-ph="c_search" autocomplete="off">
     <div class="chips" id="catChips"></div>
   </div>
-  <div class="grid" id="products"></div>
-  <p class="empty" id="noRes" hidden data-i18n="c_none"></p>
+  <div id="homeRows"></div>
+  <div id="catView" hidden>
+    <div class="cathead"><a class="btn sm" href="#catalog" data-i18n="c_back"></a><h3 id="catTitle"></h3><span class="small mono" id="catCount"></span></div>
+    <div class="grid" id="products"></div>
+    <p class="empty" id="noRes" hidden data-i18n="c_none"></p>
+  </div>
 </section>
 
 <section class="sec" id="materials">
@@ -493,7 +512,7 @@ hu:{
  hero_p:'Otthonra, asztalra, játékhoz és műhelybe. Válassz anyagot és színt, a darabot megrendelés után legyártjuk, és átvételre készen kapod.',
  hero_cta:'Katalógus',f_products:'Termékek',f_mats:'Anyagok',f_layer:'Rétegvastagság',f_recv:'Átvétel',f_recv_v:'Tab · Siófok · csomagpont · házhoz',
  play:'Lejátszás',pause:'Megállít',layer:'réteg',no_webgl:'A 3D előnézet ezen az eszközön nem érhető el.',details:'Részletek',
- c_title:'Katalógus',c_sub:'Kész modellek, amelyek közül választhatsz. Anyag és szín a termékoldalon is állítható.',c_search:'Keresés a katalógusban',c_all:'Mind',c_none:'Nincs találat.',c_add:'Kosárba',c_details:'Részletek',
+ c_title:'Katalógus',c_sub:'Kész modellek, amelyek közül választhatsz. Anyag és szín a termékoldalon is állítható.',c_search:'Keresés a katalógusban',c_all:'Mind',c_back:'← Vissza',c_more:'Mind megnézem',c_items:'{n} termék',c_prev:'Előző',c_next:'Következő',c_none:'Nincs találat.',c_add:'Kosárba',c_details:'Részletek',
  md_material:'Anyag',md_color:'Szín',md_qty:'Darab',md_size:'Méret',md_lead:'Elkészülés',md_layer:'Réteg',md_total:'Összesen',days:'munkanap',
  m_title:'Anyagok',m_sub:'A hőállóság hozzávetőleges, és függ a nyomtatási beállításoktól.',m_name:'Anyag',m_strength:'Szilárdság',m_heat:'Hőállóság',m_flex:'Rugalmasság',m_use:'Mire jó',m_extra:'Felár',
  mat_use:{PLA:'Dekor, játék, minden, ami nem melegszik.',PETG:'Tartók, mechanikus alkatrész, konyhai és kültéri használat.',ABS:'Hőt álló, strapabíró tárgyak.',ASA:'Kültér, UV-álló, napfénynek kitett részek.'},
@@ -526,7 +545,7 @@ en:{
  hero_p:'For the home, the desk, play and the workshop. Pick a material and colour; we print your piece after you order and have it ready for pick-up.',
  hero_cta:'Catalog',f_products:'Products',f_mats:'Materials',f_layer:'Layer height',f_recv:'Receive',f_recv_v:'Tab · Siófok · parcel point · home',
  play:'Play',pause:'Pause',layer:'layer',no_webgl:'3D preview is not available on this device.',details:'Details',
- c_title:'Catalog',c_sub:'Ready-made models to choose from. Material and colour can also be set on the product page.',c_search:'Search the catalog',c_all:'All',c_none:'Nothing found.',c_add:'Add to cart',c_details:'Details',
+ c_title:'Catalog',c_sub:'Ready-made models to choose from. Material and colour can also be set on the product page.',c_search:'Search the catalog',c_all:'All',c_back:'← Back',c_more:'See all',c_items:'{n} items',c_prev:'Previous',c_next:'Next',c_none:'Nothing found.',c_add:'Add to cart',c_details:'Details',
  md_material:'Material',md_color:'Colour',md_qty:'Quantity',md_size:'Size',md_lead:'Ready in',md_layer:'Layer',md_total:'Total',days:'working days',
  m_title:'Materials',m_sub:'Heat resistance is approximate and depends on print settings.',m_name:'Material',m_strength:'Strength',m_heat:'Heat',m_flex:'Flexibility',m_use:'Good for',m_extra:'Surcharge',
  mat_use:{PLA:'Decor, toys, anything that stays cool.',PETG:'Holders, mechanical parts, kitchen and outdoor use.',ABS:'Heat-tolerant, durable objects.',ASA:'Outdoor, UV-stable, parts exposed to sun.'},
@@ -559,7 +578,7 @@ ru:{
  hero_p:'Для дома, стола, игр и мастерской. Выбери материал и цвет: после заказа мы напечатаем изделие и подготовим к выдаче.',
  hero_cta:'Каталог',f_products:'Товаров',f_mats:'Материалы',f_layer:'Высота слоя',f_recv:'Получение',f_recv_v:'Таб · Шиофок · пункт выдачи · дом',
  play:'Играть',pause:'Стоп',layer:'слой',no_webgl:'3D-просмотр на этом устройстве недоступен.',details:'Подробнее',
- c_title:'Каталог',c_sub:'Готовые модели на выбор. Материал и цвет можно менять и на странице товара.',c_search:'Поиск по каталогу',c_all:'Все',c_none:'Ничего не найдено.',c_add:'В корзину',c_details:'Подробнее',
+ c_title:'Каталог',c_sub:'Готовые модели на выбор. Материал и цвет можно менять и на странице товара.',c_search:'Поиск по каталогу',c_all:'Все',c_back:'← Назад',c_more:'Смотреть все',c_items:'Товаров: {n}',c_prev:'Назад',c_next:'Вперёд',c_none:'Ничего не найдено.',c_add:'В корзину',c_details:'Подробнее',
  md_material:'Материал',md_color:'Цвет',md_qty:'Количество',md_size:'Размер',md_lead:'Готовность',md_layer:'Слой',md_total:'Итого',days:'раб. дн.',
  m_title:'Материалы',m_sub:'Термостойкость приблизительная и зависит от настроек печати.',m_name:'Материал',m_strength:'Прочность',m_heat:'Нагрев',m_flex:'Гибкость',m_use:'Для чего',m_extra:'Наценка',
  mat_use:{PLA:'Декор, игрушки, всё, что не греется.',PETG:'Держатели, механические детали, кухня и улица.',ABS:'Термостойкие прочные изделия.',ASA:'Улица, стойкость к UV, детали под солнцем.'},
@@ -592,7 +611,7 @@ const AT = {
 ru:{
  login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
- t_dash:'Обзор',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ t_dash:'Обзор',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
@@ -607,7 +626,7 @@ ru:{
 hu:{
  login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
- t_dash:'Áttekintés',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ t_dash:'Áttekintés',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
@@ -870,13 +889,9 @@ function renderChips(){
   if(catFilter !== 'all' && !cats().some(c => c.id === catFilter)) catFilter = 'all';
   $('#catChips').innerHTML = [{id:'all'}, ...cats()].map(c => `<button class="opt" data-act="cat" data-cat="${esc(c.id)}" aria-pressed="${catFilter === c.id}">${esc(c.id === 'all' ? t('c_all') : L(c.name))}</button>`).join('');
 }
-function renderCatalog(){
-  const q = query.trim().toLowerCase(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
-  const list = activeProducts().filter(p => (catFilter === 'all' || p.cat === catFilter) && (!q || ['hu','en','ru'].some(l => (p.name[l] || '').toLowerCase().includes(q))));
-  $('#noRes').hidden = list.length > 0;
-  $('#products').innerHTML = list.map(p => {
-    const s = ps(p.id);
-    return `<article class="card" data-p="${esc(p.id)}">
+function cardHTML(p, cmap){
+  const s = ps(p.id);
+  return `<article class="card" data-p="${esc(p.id)}">
       <button class="ph" data-act="open-prod" data-id="${esc(p.id)}" aria-label="${esc(L(p.name))}"><img alt="${esc(L(p.name))}" ${p.photo ? 'src="' + esc(p.photo) + '"' : ''}></button>
       <div class="bd">
         <div><div class="tagline">${esc(cmap[p.cat] ? L(cmap[p.cat].name) : '')}</div><h3>${esc(L(p.name))}</h3></div>
@@ -884,13 +899,54 @@ function renderCatalog(){
         <div class="dots">${pColors(p).map(c => `<button class="dot" data-act="card-color" data-id="${esc(p.id)}" data-color="${esc(c.id)}" style="background:${esc(c.hex)}" aria-label="${esc(colName(c.id))}" title="${esc(colName(c.id))}" aria-pressed="${s.color === c.id}"></button>`).join('')}</div>
         <div class="btns"><button class="btn sm" data-act="open-prod" data-id="${esc(p.id)}">${esc(t('c_details'))}</button><button class="btn primary sm" data-act="card-add" data-id="${esc(p.id)}">${esc(t('c_add'))}</button></div>
       </div></article>`;
-  }).join('');
-  list.forEach(paintThumb);
 }
+/* rows shown on the home page: admin-configured (settings.home) or one per category */
+function homeRows(){
+  const cfg = Array.isArray(settings().home) ? settings().home : [], act = activeProducts(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
+  const base = cfg.length ? cfg.filter(r => r.enabled !== false && cmap[r.cat]) : cats().map(c => ({id:'auto-' + c.id, cat:c.id, limit:8}));
+  return base.map(r => {
+    const all = act.filter(p => p.cat === r.cat), lim = Math.min(20, Math.max(1, +r.limit || 8));
+    const picked = (r.pids || []).map(id => all.find(p => p.id === id)).filter(Boolean);
+    const title = r.title && (r.title[lang] || r.title.hu || r.title.en || r.title.ru);
+    return {id:r.id, cat:r.cat, title:title || L(cmap[r.cat].name), items:(picked.length ? picked : all).slice(0, lim), total:all.length};
+  }).filter(r => r.items.length);
+}
+function renderCatalog(){
+  const q = query.trim().toLowerCase(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
+  const grid = catFilter !== 'all' || !!q;
+  $('#homeRows').hidden = grid; $('#catView').hidden = !grid;
+  if(grid){
+    const list = activeProducts().filter(p => (catFilter === 'all' || p.cat === catFilter) && (!q || ['hu','en','ru'].some(l => (p.name[l] || '').toLowerCase().includes(q))));
+    $('#catTitle').textContent = catFilter !== 'all' && cmap[catFilter] ? L(cmap[catFilter].name) : q ? '“' + query.trim() + '”' : t('c_all');
+    $('#catCount').textContent = t('c_items').replace('{n}', list.length);
+    $('#noRes').hidden = list.length > 0;
+    $('#products').innerHTML = list.map(p => cardHTML(p, cmap)).join('');
+    list.forEach(paintThumb);
+    return;
+  }
+  const keep = {}; $$('#homeRows .rail').forEach(r => keep[r.dataset.row] = r.scrollLeft);
+  const rows = homeRows(), shown = {};
+  $('#homeRows').innerHTML = rows.map(r => `<section class="hrow">
+      <div class="hrow-head"><h3>${esc(r.title)}</h3>
+        <div class="hrow-nav"><button class="btn sm icon" data-act="rail" data-row="${esc(r.id)}" data-d="-1" aria-label="${esc(t('c_prev'))}">←</button><button class="btn sm icon" data-act="rail" data-row="${esc(r.id)}" data-d="1" aria-label="${esc(t('c_next'))}">→</button>
+        <a class="link" href="#c-${encodeURIComponent(r.cat)}">${esc(t('c_more'))} (${r.total})</a></div></div>
+      <div class="rail" data-row="${esc(r.id)}">${r.items.map(p => cardHTML(p, cmap)).join('')}
+        <a class="card more" href="#c-${encodeURIComponent(r.cat)}"><span class="more-in"><b>${esc(t('c_more'))}</b><span class="small mono">${esc(t('c_items').replace('{n}', r.total))}</span><span class="arr" aria-hidden="true">→</span></span></a></div>
+    </section>`).join('') || `<p class="empty">${esc(t('c_none'))}</p>`;
+  rows.forEach(r => r.items.forEach(p => { if(!shown[p.id]){ shown[p.id] = 1; paintThumb(p); } }));
+  $$('#homeRows .rail').forEach(r => { if(keep[r.dataset.row]) r.scrollLeft = keep[r.dataset.row]; });
+  railArrows();
+}
+/* hide the ← → buttons on rows that fit without scrolling */
+function railArrows(){
+  $$('#homeRows .hrow').forEach(h => { const r = h.querySelector('.rail'), fit = !r || r.scrollWidth <= r.clientWidth + 2; h.querySelectorAll('.btn.icon').forEach(b => b.hidden = fit); });
+}
+window.addEventListener('resize', () => { clearTimeout(railArrows._t); railArrows._t = setTimeout(railArrows, 150); });
 function paintThumb(p){
-  const img = $(`[data-p="${CSS.escape(p.id)}"] img`); if(!img || p.photo) return;
+  if(p.photo) return;
+  const imgs = $$(`[data-p="${CSS.escape(p.id)}"] .ph img`); if(!imgs.length) return;
   const url = thumbOf(p.shape, ps(p.id).color);
-  if(url) img.src = url; else img.style.visibility = 'hidden';
+  imgs.forEach(img => { if(url) img.src = url; else img.style.visibility = 'hidden'; });
 }
 function renderMaterials(){
   const bar = n => `<span class="bar" aria-label="${n}/5">${[1,2,3,4,5].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
@@ -1204,7 +1260,7 @@ function ordRow(o){
 const ordHead = () => `<tr><th>${a('ref')}</th><th>${a('date')}</th><th>${a('cust')}</th><th>${a('phone')}</th><th class="r">${a('sum')}</th><th>${a('status')}</th><th></th></tr>`;
 function renderAdmin(){
   const box = $('#viewAdmin'); if(!adminOn){ box.innerHTML = ''; return; }
-  const tabs = [['dash','t_dash'],['orders','t_orders'],['products','t_products'],['cats','t_cats'],['mats','t_mats'],['users','t_users'],['coupons','t_coupons'],['settings','t_settings']];
+  const tabs = [['dash','t_dash'],['orders','t_orders'],['home','t_home'],['products','t_products'],['cats','t_cats'],['mats','t_mats'],['users','t_users'],['coupons','t_coupons'],['settings','t_settings']];
   const ords = admOrders(), cmap = {}; cats().forEach(c => cmap[c.id] = c);
   let body = '';
   if(adm.tab === 'dash'){
@@ -1228,6 +1284,17 @@ function renderAdmin(){
         <td>${esc(L(p.name, alang))} ${p.active ? '' : `<span class="st off">${a('p_hidden')}</span>`}</td><td>${esc(cmap[p.cat] ? L(cmap[p.cat].name, alang) : '–')}</td><td class="r mono">${fmt(p.price)}</td>
         <td><div class="rowbtns"><button class="btn sm" data-act="p-edit" data-id="${esc(p.id)}">${a('edit')}</button><button class="btn sm danger" data-act="p-del" data-id="${esc(p.id)}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')}
       </tbody></table></div>`;
+  } else if(adm.tab === 'home'){
+    const rows = homeCfg();
+    body = `<p class="small" style="max-width:640px;margin-bottom:12px">${esc(a('h_note'))}</p>
+      <div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="h-edit" data-i="-1">${a('add')} · ${a('h_new')}</button></div>
+      ${rows.length ? `<div class="tablewrap"><table style="min-width:560px"><thead><tr><th></th><th>${a('h_title').split(' (')[0]}</th><th>${a('h_cat')}</th><th class="r">${a('h_limit').split(' ')[0]}</th><th></th><th></th></tr></thead><tbody>
+      ${rows.map((r, i) => { const c = cmap[r.cat]; const n = (r.pids || []).length; return `<tr>
+        <td><div class="rowbtns"><button class="btn sm icon" data-act="h-move" data-i="${i}" data-d="-1" ${i ? '' : 'disabled'} aria-label="up">↑</button><button class="btn sm icon" data-act="h-move" data-i="${i}" data-d="1" ${i < rows.length - 1 ? '' : 'disabled'} aria-label="down">↓</button></div></td>
+        <td>${esc((r.title && (r.title[alang] || r.title.hu || r.title.ru || r.title.en)) || (c ? L(c.name, alang) : '–'))} ${r.enabled === false ? `<span class="st off">${a('p_hidden')}</span>` : ''}</td>
+        <td>${esc(c ? L(c.name, alang) : '–')}</td><td class="r mono">${r.limit || 8}</td><td class="small">${n ? esc(a('h_picked').replace('{n}', n)) : esc(a('h_auto'))}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="h-edit" data-i="${i}">${a('edit')}</button><button class="btn sm danger" data-act="h-del" data-i="${i}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')}
+      </tbody></table></div>` : `<p class="empty">${esc(a('h_empty'))}</p>`}`;
   } else if(adm.tab === 'cats'){
     body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="c-edit" data-id="">${a('add')}</button></div>
       <div class="tablewrap"><table><thead><tr><th>HU</th><th>EN</th><th>RU</th><th class="r">${a('c_cnt')}</th><th></th></tr></thead><tbody>
@@ -1348,6 +1415,26 @@ function colorDialog(id){
     <label class="f">${a('cl_hex')}<input class="inp" id="clHex" type="color" value="${esc(c ? c.hex : '#e08a50')}" style="height:46px;padding:4px"></label>
     <p id="clErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
 }
+const homeCfg = () => (Array.isArray(settings().home) ? settings().home : []).map(r => Object.assign({}, r));
+const saveHome = list => save(() => q(sb.from('settings').upsert({id:1, data:Object.assign({}, C.settings, {home:list})})), () => { closeDlg(); renderAdmin(); });
+function homePickHTML(cat, picked){
+  const list = products().filter(p => p.cat === cat && p.active);
+  if(!list.length) return `<p class="small">${esc(a('h_noprod'))}</p>`;
+  return `<div class="chk-list">${list.map(p => `<label class="ck"><input type="checkbox" name="hp" value="${esc(p.id)}" ${picked.includes(p.id) ? 'checked' : ''}> ${esc(L(p.name, alang))}</label>`).join('')}</div>`;
+}
+function homeDialog(i){
+  const rows = homeCfg(), r = i >= 0 ? rows[i] : null;
+  if(!cats().length){ openDlg(a('h_new'), `<p>${esc(a('h_nocat'))}</p>`); return; }
+  const cat = r ? r.cat : cats()[0].id;
+  openDlg(r ? a('edit') : a('h_new'), `<form class="form" id="hForm" data-i="${i}" novalidate>
+    <label class="f">${a('h_cat')}<select class="inp" id="hCat" data-on="hcat">${cats().map(c => `<option value="${esc(c.id)}" ${c.id === cat ? 'selected' : ''}>${esc(L(c.name, alang))}</option>`).join('')}</select></label>
+    <div class="small">${a('h_title')}</div>
+    ${['hu','en','ru'].map(l => `<label class="f">${l.toUpperCase()}<input class="inp" id="ht_${l}" maxlength="80" value="${esc(r && r.title ? r.title[l] || '' : '')}"></label>`).join('')}
+    <label class="f">${a('h_limit')}<input class="inp" id="hLim" type="number" min="1" max="20" value="${r ? r.limit || 8 : 8}" style="max-width:120px"></label>
+    <label class="ck"><input type="checkbox" id="hOn" ${!r || r.enabled !== false ? 'checked' : ''}> ${a('h_on')}</label>
+    <div class="small">${a('h_pick')}</div><div id="hPick">${homePickHTML(cat, r ? r.pids || [] : [])}</div>
+    <p id="hErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`);
+}
 function catDialog(id){
   const c = id ? cats().find(x => x.id === id) : null;
   openDlg(c ? a('edit') : a('c_new'), `<form class="form" id="catForm" data-id="${esc(id || '')}" novalidate>
@@ -1387,7 +1474,13 @@ function route(){
   if(h === 'admin'){ if(adminOn) view = 'admin'; else openAdminLogin(); }
   else if(h === 'account'){ if(curUser()) view = 'account'; else { wantAcc = true; openAuth('login'); } }
   show(view);
-  if(view === 'shop' && h && h !== 'admin' && h !== 'account'){ const el = document.getElementById(h); if(el && el.scrollIntoView) el.scrollIntoView(); }
+  if(view === 'shop'){
+    let cf = 'all';
+    if(h.startsWith('c-')){ const id = decodeURIComponent(h.slice(2)); if(cats().some(c => c.id === id)) cf = id; }
+    if(cf !== catFilter){ catFilter = cf; renderChips(); renderCatalog(); }
+  }
+  if(view === 'shop' && h.startsWith('c-')){ const el = $('#catalog'); if(el && el.scrollIntoView) el.scrollIntoView(); }
+  else if(view === 'shop' && h && h !== 'admin' && h !== 'account'){ const el = document.getElementById(h); if(el && el.scrollIntoView) el.scrollIntoView(); }
   else if(view !== 'shop') window.scrollTo(0, 0);
 }
 function go(h){ if(location.hash === '#' + h) route(); else location.hash = h; }
@@ -1396,7 +1489,8 @@ window.addEventListener('hashchange', route);
 /* ---------- actions ---------- */
 const ACT = {
   'close-dlg':() => closeDlg(), 'close-cart':() => closeCart(), 'close-prod':() => closeProduct(),
-  'cat':el => { catFilter = el.dataset.cat; renderChips(); renderCatalog(); },
+  'cat':el => { go(el.dataset.cat === 'all' ? 'catalog' : 'c-' + encodeURIComponent(el.dataset.cat)); },
+  'rail':el => { const r = $(`#homeRows .rail[data-row="${CSS.escape(el.dataset.row)}"]`); if(r) r.scrollBy({left:(+el.dataset.d) * r.clientWidth * 0.9, behavior:'smooth'}); },
   'open-prod':el => openProduct(el.dataset.id),
   'card-color':el => { ps(el.dataset.id).color = el.dataset.color; renderCatalog(); },
   'card-add':el => { const p = prod(el.dataset.id), s = ps(el.dataset.id); if(p) addLine(p, s.mat, s.color, 1); },
@@ -1458,6 +1552,9 @@ const ACT = {
     });
   },
   'c-edit':el => catDialog(el.dataset.id),
+  'h-edit':el => homeDialog(+el.dataset.i),
+  'h-del':el => { const rows = homeCfg(); rows.splice(+el.dataset.i, 1); saveHome(rows); },
+  'h-move':el => { const rows = homeCfg(), i = +el.dataset.i, j = i + (+el.dataset.d); if(j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; saveHome(rows); },
   'c-del':el => { if(products().some(p => p.cat === el.dataset.id)){ msg('catMsg', a('c_in_use')); return; } save(() => q(sb.from('categories').delete().eq('id', el.dataset.id))); },
   'u-orders':el => { const list = orders().filter(o => o.userId === el.dataset.id).sort((x, y) => y.ts - x.ts); const u = users().find(x => x.id === el.dataset.id); openDlg(u ? u.name : '', list.length ? `<div class="tablewrap"><table style="min-width:520px">${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`, true); },
 
@@ -1493,6 +1590,7 @@ const INP = {
   cc:el => { const p = el.dataset.p; $('#' + p + 'Num').placeholder = el.value === 'hu' ? '20 123 4567' : '50 123 4567'; $('#' + p + 'Num').value = ''; },
   mask:el => { el.value = mapPhone(el.value); },
   dl:el => { delivery = el.value; renderCart('cart'); },
+  hcat:el => { $('#hPick').innerHTML = homePickHTML(el.value, []); },
   mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
   ostatus:el => setOrderStatus(el.dataset.ref, el.value),
   photo:async el => { const f = el.files[0]; if(!f) return; const url = await readPhoto(f); if(url){ dlgPhoto = url; $('#pfPrev').innerHTML = `<img class="thumb" style="width:96px;height:72px" src="${url}" alt=""> <button type="button" class="link" data-act="p-photo-rm">${a('p_photo_rm')}</button>`; } }
@@ -1563,6 +1661,15 @@ const FORMS = {
     const prev = old ? list.find(x => x.id === old) : null;
     const row = {id:old || 'c' + uid(), name, hex, sort:prev ? prev.sort : list.length};
     save(() => q(sb.from('colors').upsert(MAP.colors.to(row))), () => { closeDlg(); renderAdmin(); });
+  },
+  hForm:e => {
+    const i = +e.target.dataset.i, rows = homeCfg(), title = {};
+    ['hu','en','ru'].forEach(l => { const v = $('#ht_' + l).value.trim().slice(0, 80); if(v) title[l] = v; });
+    const lim = Math.min(20, Math.max(1, parseInt($('#hLim').value, 10) || 8));
+    const row = {id:i >= 0 && rows[i] ? rows[i].id : 'h' + uid(), cat:$('#hCat').value, title:Object.keys(title).length ? title : null, limit:lim,
+      enabled:$('#hOn').checked, pids:$$('#hPick input[name=hp]:checked').map(x => x.value)};
+    if(i >= 0 && rows[i]) rows[i] = row; else rows.push(row);
+    saveHome(rows);
   },
   catForm:e => {
     const id = e.target.dataset.id, name = {};
