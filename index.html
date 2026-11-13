@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="hu">
+<html lang="hu" translate="no">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7,6 +7,14 @@
 <meta name="theme-color" content="#0a0a0f">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://suxnqplokgmxjmviazfr.supabase.co wss://suxnqplokgmxjmviazfr.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="google" content="notranslate">
+<script>
+/* Language before first paint: saved choice, else the device language (hu / en / ru), else English. */
+(function(){ var l = null; try { l = localStorage.getItem('pl_lang'); } catch(e){}
+  if(['hu','en','ru'].indexOf(l) < 0){ var n = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || '']);
+    for(var i = 0; i < n.length && !l; i++){ var c = String(n[i]).slice(0, 2).toLowerCase(); if(c === 'hu' || c === 'en' || c === 'ru') l = c; else if(c === 'uk' || c === 'be') l = 'ru'; } }
+  window.__LANG = l || 'en'; document.documentElement.lang = window.__LANG; })();
+</script>
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -328,7 +336,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 
 <footer class="ft">
   <span>© TOFA3D Studio · www.tofa3dstudio.com · @3dprintlabs</span>
-  <span><span data-i18n="ft_note"></span><span id="adminLink" hidden> · <a href="#admin">Admin</a></span></span>
+  <span><span data-i18n="ft_note"></span></span>
 </footer>
 </div>
 
@@ -618,7 +626,7 @@ const a = k => (AT[alang][k] !== undefined ? AT[alang][k] : AT.ru[k] !== undefin
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => Math.round(n).toLocaleString('hu-HU') + ' Ft';
-let lang = lsGet('pl_lang'); if(!T[lang]) lang = 'hu';
+let lang = lsGet('pl_lang'); if(!T[lang]) lang = T[window.__LANG] ? window.__LANG : 'hu';
 const t = k => (T[lang][k] !== undefined ? T[lang][k] : T.hu[k]);
 const L = (o, l) => o ? (o[l || lang] || o.hu || o.en || o.ru || '') : '';
 const mats = () => C.mats;
@@ -838,7 +846,7 @@ function thumbOf(shape, color){
 /* ---------- session ---------- */
 const curUser = () => ME;
 let adminOn = false, wantAdmin = false, recovering = false;
-function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); const al = $('#adminLink'); if(al) al.hidden = !adminOn; $('#cartBtn').hidden = adminOn; $('#admBtn').hidden = !adminOn; }
+function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); $('#cartBtn').hidden = adminOn; $('#admBtn').hidden = !adminOn; }
 
 /* ---------- dialogs ---------- */
 function openDlg(title, html, wide){ $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html; $('#dlgBox').classList.toggle('wide', !!wide); $('#dlgOv').hidden = false; const f = $('#dlgBody input,#dlgBody select,#dlgBody textarea'); if(f && !wide) try{ f.focus(); }catch(e){} }
