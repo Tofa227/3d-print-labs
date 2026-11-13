@@ -274,6 +274,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
     <button class="btn sm" id="themeBtn" aria-label="Theme" title="Theme">◐</button>
     <button class="btn sm" id="accBtn" data-act="acc-open"></button>
     <button class="btn sm cart-btn" id="cartBtn"><span data-i18n="cart"></span> <span class="n" id="cartN">0</span></button>
+    <a class="btn sm cart-btn" id="admBtn" href="#admin" hidden data-i18n="nav_admin"></a>
   </div>
 </div></header>
 
@@ -496,7 +497,7 @@ hu:{
  ct_title:'Kosár',ct_empty:'A kosár üres.',ct_remove:'Törlés',ct_delivery:'Átvétel',ct_total:'Végösszeg',ct_next:'Tovább a megrendeléshez',
  co_name:'Név',co_country:'Ország',co_phone:'Telefon',co_email:'E-mail (nem kötelező)',co_tg:'Telegram (nem kötelező)',co_addr:'Cím vagy csomagpont',co_note:'Megjegyzés',co_submit:'Megrendelés elküldése',
  e_name:'Add meg a neved.',e_phone:'A telefonszám 9 számjegy legyen.',e_email:'Érvénytelen e-mail cím.',e_addr:'Add meg a címet vagy a csomagpontot.',
- co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',au_or:'vagy',au_with:'Belépés ezzel: {v}',e_rate:'Túl sok rendelés rövid idő alatt. Próbáld újra később, vagy írj nekünk.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
+ co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',au_or:'vagy',nav_admin:'Admin',au_with:'Belépés ezzel: {v}',e_rate:'Túl sok rendelés rövid idő alatt. Próbáld újra később, vagy írj nekünk.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
  co_sub:'Részösszeg',co_disc:'Kedvezmény',co_fee:'Szállítás',co_guest:'Hozz létre fiókot, hogy követhesd a rendeléseidet.',co_login_hint:'Belépve a rendelésed követhető a fiókodban.',co_myacc:'Fiókom megnyitása',
  col:{graphite:'Grafit',white:'Fehér',orange:'Narancs',blue:'Kék',green:'Zöld',red:'Piros',grey:'Szürke'},
  acc_login:'Belépés',acc_my:'Fiókom',acc_logout:'Kilépés',acc_hello:'Szia',
@@ -529,7 +530,7 @@ en:{
  ct_title:'Cart',ct_empty:'Your cart is empty.',ct_remove:'Remove',ct_delivery:'Delivery',ct_total:'Total',ct_next:'Continue to checkout',
  co_name:'Name',co_country:'Country',co_phone:'Phone',co_email:'Email (optional)',co_tg:'Telegram (optional)',co_addr:'Address or parcel point',co_note:'Comment',co_submit:'Place order',
  e_name:'Enter your name.',e_phone:'Phone must have 9 digits.',e_email:'Invalid email address.',e_addr:'Enter an address or parcel point.',
- co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',au_or:'or',au_with:'Continue with {v}',e_rate:'Too many orders in a short time. Please try again later or contact us.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
+ co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',au_or:'or',nav_admin:'Admin',au_with:'Continue with {v}',e_rate:'Too many orders in a short time. Please try again later or contact us.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
  co_sub:'Subtotal',co_disc:'Discount',co_fee:'Delivery',co_guest:'Create an account to track your orders.',co_login_hint:'Signed in: you can track this order in your account.',co_myacc:'Open my account',
  col:{graphite:'Graphite',white:'White',orange:'Orange',blue:'Blue',green:'Green',red:'Red',grey:'Grey'},
  acc_login:'Sign in',acc_my:'My account',acc_logout:'Sign out',acc_hello:'Hi',
@@ -562,7 +563,7 @@ ru:{
  ct_title:'Корзина',ct_empty:'Корзина пуста.',ct_remove:'Удалить',ct_delivery:'Получение',ct_total:'Итого',ct_next:'К оформлению',
  co_name:'Имя',co_country:'Страна',co_phone:'Телефон',co_email:'Email (необязательно)',co_tg:'Telegram (необязательно)',co_addr:'Адрес или пункт выдачи',co_note:'Комментарий',co_submit:'Отправить заказ',
  e_name:'Введи имя.',e_phone:'В номере должно быть 9 цифр.',e_email:'Некорректный email.',e_addr:'Укажи адрес или пункт выдачи.',
- co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',au_or:'или',au_with:'Войти через {v}',e_rate:'Слишком много заказов за короткое время. Попробуй позже или напиши нам.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
+ co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',au_or:'или',nav_admin:'Админка',au_with:'Войти через {v}',e_rate:'Слишком много заказов за короткое время. Попробуй позже или напиши нам.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
  co_sub:'Сумма товаров',co_disc:'Скидка',co_fee:'Доставка',co_guest:'Создай аккаунт, чтобы следить за заказами.',co_login_hint:'Ты вошёл: заказ будет виден в кабинете.',co_myacc:'Открыть кабинет',
  col:{graphite:'Графит',white:'Белый',orange:'Оранжевый',blue:'Синий',green:'Зелёный',red:'Красный',grey:'Серый'},
  acc_login:'Войти',acc_my:'Кабинет',acc_logout:'Выйти',acc_hello:'Привет',
@@ -837,7 +838,7 @@ function thumbOf(shape, color){
 /* ---------- session ---------- */
 const curUser = () => ME;
 let adminOn = false, wantAdmin = false, recovering = false;
-function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); const al = $('#adminLink'); if(al) al.hidden = !adminOn; }
+function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); const al = $('#adminLink'); if(al) al.hidden = !adminOn; $('#cartBtn').hidden = adminOn; $('#admBtn').hidden = !adminOn; }
 
 /* ---------- dialogs ---------- */
 function openDlg(title, html, wide){ $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html; $('#dlgBox').classList.toggle('wide', !!wide); $('#dlgOv').hidden = false; const f = $('#dlgBody input,#dlgBody select,#dlgBody textarea'); if(f && !wide) try{ f.focus(); }catch(e){} }
