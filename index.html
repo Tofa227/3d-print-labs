@@ -323,7 +323,7 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 
 <footer class="ft">
   <span>© TOFA3D Studio · www.tofa3dstudio.com · @3dprintlabs</span>
-  <span><span data-i18n="ft_note"></span> · <a href="#admin" id="adminLink">Admin</a></span>
+  <span><span data-i18n="ft_note"></span><span id="adminLink" hidden> · <a href="#admin">Admin</a></span></span>
 </footer>
 </div>
 
@@ -835,7 +835,7 @@ function thumbOf(shape, color){
 /* ---------- session ---------- */
 const curUser = () => ME;
 let adminOn = false, wantAdmin = false, recovering = false;
-function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); }
+function accLabel(){ const u = curUser(); $('#accBtn').textContent = u ? '👤 ' + u.name.split(' ')[0] : t('acc_login'); const al = $('#adminLink'); if(al) al.hidden = !adminOn; }
 
 /* ---------- dialogs ---------- */
 function openDlg(title, html, wide){ $('#dlgTitle').textContent = title; $('#dlgBody').innerHTML = html; $('#dlgBox').classList.toggle('wide', !!wide); $('#dlgOv').hidden = false; const f = $('#dlgBody input,#dlgBody select,#dlgBody textarea'); if(f && !wide) try{ f.focus(); }catch(e){} }
