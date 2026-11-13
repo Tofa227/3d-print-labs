@@ -157,6 +157,7 @@ section.sec{padding-block:72px 0}
 .phmain{position:absolute;top:4px;left:4px;background:var(--accent);color:var(--accent-ink);font:600 10px var(--font-mono);padding:2px 6px;border-radius:4px;text-transform:uppercase}
 .phbtns{display:flex;gap:4px}.phbtns .btn.icon{width:30px;height:28px;min-height:0}
 .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.admfilters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}.admfilters .f{min-width:150px}.admfilters #apQ{flex:1 1 200px;max-width:320px}
 .cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -456,7 +457,7 @@ let ME = null;
 async function q(p){ const r = await p; if(r.error) throw r.error; return r.data; }
 const nz = a => Array.isArray(a) && a.length ? a : null;
 const MAP = {
-  products:{from:r => ({id:r.id, shape:r.shape || '', cat:r.cat, price:r.price, name:r.name, desc:r.descr || {}, active:r.active, photo:r.photo || '', photos:Array.isArray(r.photos) ? r.photos : [], dims:r.dims || null, mats:r.mats || [], colors:r.colors || [], sort:r.sort || 0}),
+  products:{from:r => ({id:r.id, shape:r.shape || '', cat:r.cat, price:r.price, name:r.name, desc:r.descr || {}, active:r.active, photo:r.photo || '', photos:Array.isArray(r.photos) ? r.photos : [], dims:r.dims || null, created:Date.parse(r.created_at) || 0, mats:r.mats || [], colors:r.colors || [], sort:r.sort || 0}),
             to:p => ({id:p.id, shape:p.shape || null, cat:p.cat || null, price:p.price, name:p.name, descr:p.desc || {}, active:!!p.active, photo:p.photo || '', photos:p.photos || [], dims:p.dims || null, mats:nz(p.mats), colors:nz(p.colors), sort:p.sort || 0})},
   materials:{from:r => ({id:r.id, pct:+r.pct, S:r.s, H:r.h, F:r.f, temp:r.temp, use:r.use || {}, sort:r.sort || 0}),
              to:m => ({id:m.id, pct:m.pct, s:m.S, h:m.H, f:m.F, temp:m.temp, use:m.use || {}, sort:m.sort || 0})},
@@ -625,7 +626,7 @@ const AT = {
 ru:{
  login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
- t_dash:'Обзор',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ t_dash:'Обзор',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
@@ -640,7 +641,7 @@ ru:{
 hu:{
  login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
- t_dash:'Áttekintés',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ t_dash:'Áttekintés',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
@@ -1288,7 +1289,22 @@ function renderAccount(){
 }
 
 /* ---------- admin ---------- */
-const adm = {tab:'dash', ordFilter:'all'};
+const adm = {tab:'dash', ordFilter:'all', pq:'', pcat:'all', pst:'all', psort:'order'};
+try { Object.assign(adm, JSON.parse(lsGet('pl_admp') || '{}'), {tab:'dash'}); } catch(e){}
+function admProdRows(cmap){
+  const q = adm.pq.trim().toLowerCase();
+  let list = products().filter(p => (adm.pcat === 'all' || (adm.pcat === 'none' ? !cmap[p.cat] : p.cat === adm.pcat))
+    && (adm.pst === 'all' || (adm.pst === 'on') === !!p.active)
+    && (!q || ['hu','en','ru'].some(l => (p.name[l] || '').toLowerCase().includes(q)) || p.id.toLowerCase().includes(q)));
+  const by = {name:(x, y) => L(x.name, alang).localeCompare(L(y.name, alang), alang), pa:(x, y) => x.price - y.price, pd:(x, y) => y.price - x.price,
+    nw:(x, y) => (y.created || 0) - (x.created || 0), cat:(x, y) => (cmap[x.cat] ? L(cmap[x.cat].name, alang) : '~').localeCompare(cmap[y.cat] ? L(cmap[y.cat].name, alang) : '~', alang) || L(x.name, alang).localeCompare(L(y.name, alang), alang)}[adm.psort];
+  if(by) list = list.slice().sort(by);
+  $('#apCount').textContent = a('p_shown').replace('{n}', list.length).replace('{m}', products().length);
+  $('#apBody').innerHTML = list.map(p => { const th = (photosOf(p)[0] || {}).t || thumbOf(p.shape, 'orange'); return `<tr><td>${th ? `<img class="thumb" src="${esc(th)}" alt="">` : '<span class="thumb"></span>'}</td>
+        <td>${esc(L(p.name, alang))} ${p.active ? '' : `<span class="st off">${a('p_hidden')}</span>`}</td><td>${esc(cmap[p.cat] ? L(cmap[p.cat].name, alang) : '–')}</td><td class="r mono">${fmt(p.price)}</td>
+        <td><div class="rowbtns"><button class="btn sm" data-act="p-edit" data-id="${esc(p.id)}">${a('edit')}</button><button class="btn sm danger" data-act="p-del" data-id="${esc(p.id)}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')
+    || `<tr><td colspan="5" class="empty">${a('none')}</td></tr>`;
+}
 function openAdminLogin(){
   if(curUser()){ openDlg(a('login_t'), `<p>${esc(a('no_rights'))}</p>`); return; }
   openAuth('login'); wantAdmin = true; $('#dlgTitle').textContent = a('login_t');
@@ -1323,12 +1339,15 @@ function renderAdmin(){
     body = `<div class="chips" style="margin-bottom:14px">${['all', ...STATUSES].map(s => `<button class="opt" data-act="ord-filter" data-s="${s}" aria-pressed="${adm.ordFilter === s}">${esc(s === 'all' ? a('all') : stL(s))}${s === 'all' ? '' : ' ' + ords.filter(o => o.status === s).length}</button>`).join('')}</div>
       ${list.length ? `<div class="tablewrap"><table>${ordHead()}<tbody>${list.map(ordRow).join('')}</tbody></table></div>` : `<p class="empty">${a('none')}</p>`}`;
   } else if(adm.tab === 'products'){
-    body = `<div class="rowbtns" style="margin-bottom:14px"><button class="btn primary" data-act="p-edit" data-id="">${a('add')}</button></div>
-      <div class="tablewrap"><table><thead><tr><th></th><th>${a('p_name')}</th><th>${a('p_cat')}</th><th class="r">${a('p_price')}</th><th></th></tr></thead><tbody>
-      ${products().map(p => { const th = (photosOf(p)[0] || {}).t || thumbOf(p.shape, 'orange'); return `<tr><td>${th ? `<img class="thumb" src="${esc(th)}" alt="">` : '<span class="thumb"></span>'}</td>
-        <td>${esc(L(p.name, alang))} ${p.active ? '' : `<span class="st off">${a('p_hidden')}</span>`}</td><td>${esc(cmap[p.cat] ? L(cmap[p.cat].name, alang) : '–')}</td><td class="r mono">${fmt(p.price)}</td>
-        <td><div class="rowbtns"><button class="btn sm" data-act="p-edit" data-id="${esc(p.id)}">${a('edit')}</button><button class="btn sm danger" data-act="p-del" data-id="${esc(p.id)}" data-sure="1">${a('del')}</button></div></td></tr>`; }).join('')}
-      </tbody></table></div>`;
+    const opt = (v, cur, label) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(label)}</option>`;
+    body = `<div class="admfilters">
+        <button class="btn primary" data-act="p-edit" data-id="">${a('add')}</button>
+        <input class="inp" id="apQ" type="search" placeholder="${esc(a('p_search'))}" value="${esc(adm.pq)}" data-on="apf" data-k="pq">
+        <label class="f">${a('p_cat')}<select class="inp" data-on="apf" data-k="pcat">${opt('all', adm.pcat, a('p_all'))}${cats().map(c => opt(c.id, adm.pcat, L(c.name, alang))).join('')}${opt('none', adm.pcat, a('p_nocat'))}</select></label>
+        <label class="f">${a('p_status')}<select class="inp" data-on="apf" data-k="pst">${opt('all', adm.pst, a('p_all'))}${opt('on', adm.pst, a('p_visible'))}${opt('off', adm.pst, a('p_hidden'))}</select></label>
+        <label class="f">${a('p_sort')}<select class="inp" data-on="apf" data-k="psort">${opt('order', adm.psort, a('ps_order'))}${opt('name', adm.psort, a('ps_name'))}${opt('pa', adm.psort, a('ps_pa'))}${opt('pd', adm.psort, a('ps_pd'))}${opt('nw', adm.psort, a('ps_nw'))}${opt('cat', adm.psort, a('ps_cat'))}</select></label>
+        <span class="small mono" id="apCount"></span></div>
+      <div class="tablewrap"><table><thead><tr><th></th><th>${a('p_name')}</th><th>${a('p_cat')}</th><th class="r">${a('p_price')}</th><th></th></tr></thead><tbody id="apBody"></tbody></table></div>`;
   } else if(adm.tab === 'home'){
     const rows = homeCfg();
     body = `<p class="small" style="max-width:640px;margin-bottom:12px">${esc(a('h_note'))}</p>
@@ -1386,6 +1405,7 @@ function renderAdmin(){
     <div class="rowbtns"><div class="seg" role="group" aria-label="Admin language"><button data-act="adm-lang" data-l="ru" aria-pressed="${alang === 'ru'}">RU</button><button data-act="adm-lang" data-l="hu" aria-pressed="${alang === 'hu'}">HU</button></div>
     <a class="btn" href="#top">${a('toshop')}</a><button class="btn" data-act="adm-logout">${a('logout')}</button></div></div>
     <div class="tabs">${tabs.map(x => `<button class="opt" data-act="adm-tab" data-tab="${x[0]}" aria-pressed="${adm.tab === x[0]}">${esc(a(x[1]))}</button>`).join('')}</div>${body}</div>`;
+  if(adm.tab === 'products') admProdRows(cmap);
 }
 function ordDialog(ref){
   const o = orders().find(x => x.ref === ref); if(!o) return;
@@ -1669,6 +1689,7 @@ const INP = {
   cc:el => { const p = el.dataset.p; $('#' + p + 'Num').placeholder = el.value === 'hu' ? '20 123 4567' : '50 123 4567'; $('#' + p + 'Num').value = ''; },
   mask:el => { el.value = mapPhone(el.value); },
   dl:el => { delivery = el.value; renderCart('cart'); },
+  apf:el => { adm[el.dataset.k] = el.value; lsSet('pl_admp', JSON.stringify({pq:adm.pq, pcat:adm.pcat, pst:adm.pst, psort:adm.psort})); const cmap = {}; cats().forEach(c => cmap[c.id] = c); admProdRows(cmap); },
   hcat:el => { $('#hPick').innerHTML = homePickHTML(el.value, []); },
   mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
   ostatus:el => setOrderStatus(el.dataset.ref, el.value),
@@ -1679,7 +1700,7 @@ const INP = {
 };
 ['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
   const on = e.target.dataset && e.target.dataset.on; if(!on || !INP[on]) return;
-  const isText = e.target.tagName === 'INPUT' && (e.target.type === 'tel' || e.target.type === 'text');
+  const isText = e.target.tagName === 'INPUT' && (e.target.type === 'tel' || e.target.type === 'text' || e.target.type === 'search');
   if(ev === 'input' && !isText) return; if(ev === 'change' && isText && on === 'mask') return;
   INP[on](e.target);
 }));
