@@ -255,6 +255,8 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 .hl-hot{position:absolute;left:-4%;right:-4%;height:3px;background:var(--fg);box-shadow:0 0 14px 2px var(--accent);border-radius:2px;top:calc((1 - var(--p,1)) * 100%)}
 .hl-noz{position:absolute;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:20px solid var(--fg);margin:-22px 0 0 -9px;top:calc((1 - var(--p,1)) * 100%)}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.oauthbox{display:grid;gap:8px}.btn.oauth{width:100%;justify-content:center}
+.orline{display:flex;align-items:center;gap:10px;margin:14px 0 6px;color:var(--muted);font-size:13px}.orline:before,.orline:after{content:'';flex:1;height:1px;background:var(--line)}
 #toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100;max-width:min(92vw,520px);padding:12px 16px;border-radius:10px;background:var(--fg);color:var(--bg);font:500 14px/1.4 var(--font-body,system-ui);box-shadow:0 8px 30px rgba(0,0,0,.35)}
 </style>
 
@@ -494,7 +496,7 @@ hu:{
  ct_title:'Kosár',ct_empty:'A kosár üres.',ct_remove:'Törlés',ct_delivery:'Átvétel',ct_total:'Végösszeg',ct_next:'Tovább a megrendeléshez',
  co_name:'Név',co_country:'Ország',co_phone:'Telefon',co_email:'E-mail (nem kötelező)',co_tg:'Telegram (nem kötelező)',co_addr:'Cím vagy csomagpont',co_note:'Megjegyzés',co_submit:'Megrendelés elküldése',
  e_name:'Add meg a neved.',e_phone:'A telefonszám 9 számjegy legyen.',e_email:'Érvénytelen e-mail cím.',e_addr:'Add meg a címet vagy a csomagpontot.',
- co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',e_rate:'Túl sok rendelés rövid idő alatt. Próbáld újra később, vagy írj nekünk.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
+ co_done:'Megrendelés rögzítve',co_ref:'Azonosító',co_copy:'Összegzés másolása',co_copied:'Másolva',co_close:'Bezár',co_demo:'Hamarosan felvesszük veled a kapcsolatot a rendelés megerősítéséhez.',au_confirm:'Elküldtük a megerősítő levelet. Kattints a benne lévő linkre, majd lépj be.',au_reset:'Elfelejtetted a jelszót?',au_reset_sent:'Ha van ilyen fiók, elküldtük a jelszó-visszaállító levelet.',e_net:'Nem sikerült kapcsolódni a szerverhez. Próbáld újra.',e_order:'A rendelést nem sikerült elküldeni. Próbáld újra.',au_or:'vagy',au_with:'Belépés ezzel: {v}',e_rate:'Túl sok rendelés rövid idő alatt. Próbáld újra később, vagy írj nekünk.',e_email_unconf:'Előbb erősítsd meg az e-mail címed a levélben lévő linkkel.',back:'Vissza',
  co_sub:'Részösszeg',co_disc:'Kedvezmény',co_fee:'Szállítás',co_guest:'Hozz létre fiókot, hogy követhesd a rendeléseidet.',co_login_hint:'Belépve a rendelésed követhető a fiókodban.',co_myacc:'Fiókom megnyitása',
  col:{graphite:'Grafit',white:'Fehér',orange:'Narancs',blue:'Kék',green:'Zöld',red:'Piros',grey:'Szürke'},
  acc_login:'Belépés',acc_my:'Fiókom',acc_logout:'Kilépés',acc_hello:'Szia',
@@ -527,7 +529,7 @@ en:{
  ct_title:'Cart',ct_empty:'Your cart is empty.',ct_remove:'Remove',ct_delivery:'Delivery',ct_total:'Total',ct_next:'Continue to checkout',
  co_name:'Name',co_country:'Country',co_phone:'Phone',co_email:'Email (optional)',co_tg:'Telegram (optional)',co_addr:'Address or parcel point',co_note:'Comment',co_submit:'Place order',
  e_name:'Enter your name.',e_phone:'Phone must have 9 digits.',e_email:'Invalid email address.',e_addr:'Enter an address or parcel point.',
- co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',e_rate:'Too many orders in a short time. Please try again later or contact us.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
+ co_done:'Order recorded',co_ref:'Reference',co_copy:'Copy summary',co_copied:'Copied',co_close:'Close',co_demo:'We will contact you shortly to confirm the order.',au_confirm:'We sent you a confirmation email. Click the link in it, then sign in.',au_reset:'Forgot your password?',au_reset_sent:'If the account exists, we sent a password reset email.',e_net:'Could not reach the server. Please try again.',e_order:'The order could not be sent. Please try again.',au_or:'or',au_with:'Continue with {v}',e_rate:'Too many orders in a short time. Please try again later or contact us.',e_email_unconf:'Please confirm your email first using the link we sent.',back:'Back',
  co_sub:'Subtotal',co_disc:'Discount',co_fee:'Delivery',co_guest:'Create an account to track your orders.',co_login_hint:'Signed in: you can track this order in your account.',co_myacc:'Open my account',
  col:{graphite:'Graphite',white:'White',orange:'Orange',blue:'Blue',green:'Green',red:'Red',grey:'Grey'},
  acc_login:'Sign in',acc_my:'My account',acc_logout:'Sign out',acc_hello:'Hi',
@@ -560,7 +562,7 @@ ru:{
  ct_title:'Корзина',ct_empty:'Корзина пуста.',ct_remove:'Удалить',ct_delivery:'Получение',ct_total:'Итого',ct_next:'К оформлению',
  co_name:'Имя',co_country:'Страна',co_phone:'Телефон',co_email:'Email (необязательно)',co_tg:'Telegram (необязательно)',co_addr:'Адрес или пункт выдачи',co_note:'Комментарий',co_submit:'Отправить заказ',
  e_name:'Введи имя.',e_phone:'В номере должно быть 9 цифр.',e_email:'Некорректный email.',e_addr:'Укажи адрес или пункт выдачи.',
- co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',e_rate:'Слишком много заказов за короткое время. Попробуй позже или напиши нам.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
+ co_done:'Заказ записан',co_ref:'Номер',co_copy:'Скопировать сводку',co_copied:'Скопировано',co_close:'Закрыть',co_demo:'Мы скоро свяжемся с тобой, чтобы подтвердить заказ.',au_confirm:'Мы отправили письмо для подтверждения. Перейди по ссылке в нём, затем войди.',au_reset:'Забыли пароль?',au_reset_sent:'Если такой аккаунт есть, мы отправили письмо для сброса пароля.',e_net:'Не удалось связаться с сервером. Попробуй ещё раз.',e_order:'Не удалось отправить заказ. Попробуй ещё раз.',au_or:'или',au_with:'Войти через {v}',e_rate:'Слишком много заказов за короткое время. Попробуй позже или напиши нам.',e_email_unconf:'Сначала подтверди email по ссылке из письма.',back:'Назад',
  co_sub:'Сумма товаров',co_disc:'Скидка',co_fee:'Доставка',co_guest:'Создай аккаунт, чтобы следить за заказами.',co_login_hint:'Ты вошёл: заказ будет виден в кабинете.',co_myacc:'Открыть кабинет',
  col:{graphite:'Графит',white:'Белый',orange:'Оранжевый',blue:'Синий',green:'Зелёный',red:'Красный',grey:'Серый'},
  acc_login:'Войти',acc_my:'Кабинет',acc_logout:'Выйти',acc_hello:'Привет',
@@ -1073,9 +1075,16 @@ async function submitOrder(){
 
 /* ---------- auth ---------- */
 let authMode = 'login';
+const OAUTH = [['google', 'Google'], ['facebook', 'Facebook'], ['x', 'X']];
+let OAUTH_ON = {};   // filled from Supabase /auth/v1/settings: only providers switched on there get a button
+async function loadOAuth(){
+  try { const r = await fetch(SBC.url + '/auth/v1/settings', {headers:{apikey:SBC.key}}); if(r.ok){ const j = await r.json(); OAUTH_ON = j.external || {}; } } catch(e){}
+}
 function authHTML(){
   const reg = authMode === 'register';
-  return `<form class="form" id="auForm" novalidate>
+  const oauth = OAUTH.filter(([id]) => OAUTH_ON[id]).map(([id, label]) => `<button type="button" class="btn oauth" data-act="au-oauth" data-p="${id}">${esc(t('au_with').replace('{v}', label))}</button>`).join('');
+  return `${oauth ? `<div class="oauthbox">${oauth}</div><div class="orline"><span>${esc(t('au_or'))}</span></div>` : ''}
+  <form class="form" id="auForm" novalidate>
     ${reg ? `<label class="f">${t('au_name')}<input class="inp" id="auName" autocomplete="name"></label>` : ''}
     <label class="f">${t('au_email')}<input class="inp" id="auEmail" type="email" autocomplete="email"></label>
     ${reg ? `<label class="f">${t('au_phone')}${phoneField('au', null)}</label>` : ''}
@@ -1398,6 +1407,11 @@ const ACT = {
   'acc-open':() => { if(curUser()) go('account'); else { wantAcc = true; openAuth('login'); } },
   'au-login':() => openAuth('login'), 'au-reg':() => { closeCart(); openAuth('register'); },
   'logout':async () => { await sb.auth.signOut(); try { await loadAll(); } catch(e){} accLabel(); refreshShop(); go('top'); },
+  'au-oauth':async el => {
+    lsSet('pl_after', wantAdmin ? 'admin' : wantAcc ? 'account' : '');
+    const r = await sb.auth.signInWithOAuth({provider:el.dataset.p, options:{redirectTo:location.origin + location.pathname}});
+    if(r.error) msg('auErr', r.error.message || t('e_net'));
+  },
   'au-forgot':async () => {
     const email = ($('#auEmail').value || '').trim().toLowerCase();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('auErr', t('e_email'));
@@ -1610,12 +1624,13 @@ $('#cartBtn').addEventListener('click', () => openCart());
   const th = lsGet('pl_theme'); if(th === 'light' || th === 'dark') applyTheme(th);
   if(!sb){ toast(t('e_net')); }
   else {
-    try { await loadAll(); } catch(e){ console.error(e); toast(t('e_net')); }
+    try { await Promise.all([loadAll(), loadOAuth()]); } catch(e){ console.error(e); toast(t('e_net')); }
     sb.auth.onAuthStateChange(ev => { if(ev === 'PASSWORD_RECOVERY') recovering = true, setTimeout(() => { go('account'); accTab = 'profile'; renderAccount(); }, 300); });
   }
   cart = DB.get('cart', []); cart = Array.isArray(cart) ? cart.filter(l => l && prod(l.pid)) : [];
   saveCart(); applyLang();
   startHeroAnim();
+  const after = lsGet('pl_after'); if(after !== null){ try { localStorage.removeItem('pl_after'); } catch(e){} if(after && curUser() && (location.hash === '' || location.hash === '#')) location.hash = after; }
   route();
 })();
 </script>

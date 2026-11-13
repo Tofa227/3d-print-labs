@@ -26,7 +26,8 @@ language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, name, email, phone)
   values (new.id,
-          left(coalesce(new.raw_user_meta_data->>'name', ''), 100),
+          left(coalesce(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name',
+                        new.raw_user_meta_data->>'user_name', split_part(coalesce(new.email, ''), '@', 1), ''), 100),
           new.email,
           case when pg_column_size(new.raw_user_meta_data->'phone') < 400 then new.raw_user_meta_data->'phone' end)
   on conflict (id) do nothing;
