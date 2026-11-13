@@ -298,6 +298,17 @@ begin
    where ref = p_ref;
 end $$;
 
+-- Явные права для API (работает и при выключенном «Automatically expose new tables»).
+-- Что именно можно делать со строками, всё равно решают политики RLS выше.
+grant usage on schema public to anon, authenticated;
+grant select on public.categories, public.materials, public.colors, public.products,
+               public.delivery, public.settings to anon, authenticated;
+grant insert, update, delete on public.categories, public.materials, public.colors, public.products,
+               public.delivery, public.settings, public.coupons to authenticated;
+grant select on public.coupons, public.orders, public.profiles to authenticated;
+grant update on public.profiles, public.orders to authenticated;
+grant delete on public.orders to authenticated;
+
 revoke all on function public.place_order(jsonb) from public;
 grant execute on function public.place_order(jsonb) to anon, authenticated;
 grant execute on function public.check_coupon(text, int) to anon, authenticated;
