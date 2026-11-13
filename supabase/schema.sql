@@ -88,6 +88,7 @@ create table if not exists public.products (
   active      boolean not null default true,
   photo       text not null default '',   -- старое поле (одно фото в base64), заменено на photos
   photos      jsonb not null default '[]',  -- [{u: полное фото, t: миниатюра, k: путь в Storage}]
+  dims        jsonb,                     -- {w, d, h} в мм
   mats        text[],                -- пусто = все материалы
   colors      text[],                -- пусто = все цвета
   sort        int not null default 0,
@@ -95,6 +96,7 @@ create table if not exists public.products (
 );
 
 alter table public.products add column if not exists photos jsonb not null default '[]';
+alter table public.products add column if not exists dims jsonb;   -- {w, d, h} в мм; пусто = из 3D-модели
 
 create table if not exists public.delivery (
   id       text primary key,
