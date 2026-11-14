@@ -412,3 +412,163 @@ begin
     create policy products_img_delete on storage.objects for delete to authenticated using (bucket_id = 'products' and public.is_admin());
   end if;
 end $$;
+
+-- ============ Уведомления в Telegram о новых заказах ============
+-- Работает через расширение pg_net: после записи заказа база сама отправляет сообщение боту.
+-- Токен бота лежит в закрытой схеме private, через API его не прочитать.
+do $$ begin
+  create extension if not exists pg_net;
+exception when others then raise notice 'pg_net is not available: %', sqlerrm;
+end $$;
+
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create table if not exists private.tg_config (
+  id         int primary key default 1 check (id = 1),
+  bot_token  text not null default '',
+  chat_id    text not null default '',
+  enabled    boolean not null default true,
+  last_req   bigint
+);
+revoke all on private.tg_config from public, anon, authenticated;
+
+create or replace function private.h(t text) returns text language sql immutable as $$
+  select replace(replace(replace(coalesce(t, ''), '&', '&amp;'), '<', '&lt;'), '>', '&gt;');
+$$;
+create or replace function private.ft(n numeric) returns text language sql immutable as $$
+  select replace(to_char(coalesce(n, 0), 'FM999,999,999'), ',', ' ') || ' Ft';
+$$;
+
+-- Отправка запроса в Telegram API; возвращает id запроса pg_net (или null, если отправить нельзя).
+create or replace function private.tg_call(p_method text, p_body jsonb)
+returns bigint language plpgsql security definer set search_path = public, private as $$
+declare c private.tg_config; rid bigint;
+begin
+  select * into c from private.tg_config where id = 1;
+  if not found or c.bot_token = '' or c.chat_id = '' then return null; end if;
+  execute 'select net.http_post(url := $1, body := $2, headers := $3, timeout_milliseconds := 8000)'
+    into rid
+    using 'https://api.telegram.org/bot' || c.bot_token || '/' || p_method,
+          p_body || jsonb_build_object('chat_id', c.chat_id),
+          '{"Content-Type": "application/json"}'::jsonb;
+  update private.tg_config set last_req = rid where id = 1;
+  return rid;
+exception when others then
+  raise notice 'telegram send failed: %', sqlerrm;
+  return null;
+end $$;
+
+-- Текст уведомления о заказе (HTML-разметка Telegram).
+create or replace function private.tg_order_text(o public.orders)
+returns text language plpgsql stable security definer set search_path = public, private as $$
+declare it jsonb; i int := 0; t text; cname text;
+begin
+  t := '🛒 <b>Новый заказ!</b>' || chr(10) || '🏷 <code>' || private.h(o.ref) || '</code>' || chr(10)
+    || '👤 <b>Контактные данные</b>' || chr(10)
+    || '    Получатель: ' || private.h(o.name) || chr(10)
+    || '    Телефон: ' || private.h(coalesce(o.phone->>'text', o.phone->>'digits', '')) || chr(10)
+    || case when o.mail <> '' then '    Email: ' || private.h(o.mail) || chr(10) else '' end
+    || case when o.tg <> '' then '    Telegram: ' || private.h(o.tg) || chr(10) else '' end
+    || case when o.user_id is null then '    <i>без регистрации</i>' || chr(10) else '' end
+    || '📦 <b>Состав заказа:</b>' || chr(10);
+  for it in select * from jsonb_array_elements(o.items) loop
+    i := i + 1; cname := null;
+    select coalesce(name->>'ru', name->>'hu', id) into cname from public.colors where id = it->>'color';
+    t := t || i || '. <b>' || private.h(coalesce(it->'name'->>'ru', it->'name'->>'hu', it->>'pid')) || '</b>' || chr(10)
+      || '    <i>цвет: ' || private.h(coalesce(cname, it->>'color')) || ', материал: ' || private.h(it->>'mat') || '</i>' || chr(10)
+      || '    Кол-во: ' || (it->>'qty') || ' × ' || private.ft((it->>'unit')::numeric) || chr(10);
+  end loop;
+  if o.coupon is not null then
+    t := t || '🎟 Купон: ' || private.h(o.coupon->>'code') || ' −' || private.ft(o.discount) || chr(10);
+  end if;
+  t := t || '🚚 <b>Доставка:</b> ' || private.h(coalesce(o.delivery->'name'->>'ru', o.delivery->'name'->>'hu', o.delivery->>'id'))
+    || case when coalesce((o.delivery->>'fee')::int, 0) > 0 then ' (+' || private.ft((o.delivery->>'fee')::numeric) || ')' else '' end || chr(10)
+    || case when o.addr <> '' then '📍 ' || private.h(o.addr) || chr(10) else '' end
+    || case when o.note <> '' then '💬 ' || private.h(left(o.note, 300)) || chr(10) else '' end
+    || '💰 <b>Итого: ' || private.ft(o.total) || '</b>';
+  return t;
+end $$;
+
+create or replace function private.tg_on_order() returns trigger
+language plpgsql security definer set search_path = public, private as $$
+declare txt text; photo text; kb jsonb := '[]'; it jsonb; pu text; c private.tg_config;
+begin
+  select * into c from private.tg_config where id = 1;
+  if not found or not c.enabled or c.bot_token = '' or c.chat_id = '' then return new; end if;
+  txt := private.tg_order_text(new);
+  select p.photos->0->>'u' into photo from public.products p where p.id = new.items->0->>'pid';
+  -- кнопки: «Печатать» для товаров со ссылкой на модель и «Открыть в админке»
+  for it in select * from jsonb_array_elements(new.items) loop
+    pu := null;
+    select print_url into pu from public.product_admin where pid = it->>'pid' and print_url <> '';
+    if pu is not null and jsonb_array_length(kb) < 6 then
+      kb := kb || jsonb_build_array(jsonb_build_array(jsonb_build_object('text', '🖨 ' || left(coalesce(it->'name'->>'ru', it->>'pid'), 40), 'url', pu)));
+    end if;
+  end loop;
+  kb := kb || jsonb_build_array(jsonb_build_array(jsonb_build_object('text', '📋 Открыть в админке', 'url', 'https://tofa3dstudio.com/#admin')));
+  if photo is not null and photo like 'https://%' and length(txt) <= 1000 then
+    perform private.tg_call('sendPhoto', jsonb_build_object('photo', photo, 'caption', txt, 'parse_mode', 'HTML', 'reply_markup', jsonb_build_object('inline_keyboard', kb)));
+  else
+    perform private.tg_call('sendMessage', jsonb_build_object('text', txt, 'parse_mode', 'HTML', 'disable_web_page_preview', true, 'reply_markup', jsonb_build_object('inline_keyboard', kb)));
+  end if;
+  return new;
+exception when others then
+  raise notice 'telegram notify failed: %', sqlerrm;
+  return new;  -- заказ сохраняется в любом случае
+end $$;
+
+drop trigger if exists orders_tg_notify on public.orders;
+create trigger orders_tg_notify after insert on public.orders
+  for each row execute function private.tg_on_order();
+
+-- Настройки для админки: токен наружу не отдаётся, только признак «задан».
+create or replace function public.tg_settings()
+returns jsonb language plpgsql security definer set search_path = public, private as $$
+declare c private.tg_config; st int; body text; res jsonb := null;
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  select * into c from private.tg_config where id = 1;
+  if c.last_req is not null then
+    begin
+      execute 'select status_code, left(coalesce(content::text, error_msg, $2), 300) from net._http_response where id = $1'
+        into st, body using c.last_req, '';
+      if st is not null or body is not null then res := jsonb_build_object('status', st, 'body', body); end if;
+    exception when others then res := null;
+    end;
+  end if;
+  return jsonb_build_object(
+    'configured', coalesce(c.bot_token, '') <> '' and coalesce(c.chat_id, '') <> '',
+    'token_set', coalesce(c.bot_token, '') <> '',
+    'chat_id', coalesce(c.chat_id, ''),
+    'enabled', coalesce(c.enabled, true),
+    'net', exists (select 1 from pg_extension where extname = 'pg_net'),
+    'last', res);
+end $$;
+
+create or replace function public.tg_save(p_token text, p_chat text, p_enabled boolean)
+returns void language plpgsql security definer set search_path = public, private as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  p_token := trim(coalesce(p_token, '')); p_chat := trim(coalesce(p_chat, ''));
+  if p_token <> '' and p_token !~ '^[0-9]{5,15}:[A-Za-z0-9_-]{20,60}$' then raise exception 'bad_token'; end if;
+  if p_chat !~ '^-?[0-9]{3,20}$' and p_chat !~ '^@[A-Za-z0-9_]{4,40}$' then raise exception 'bad_chat'; end if;
+  insert into private.tg_config (id, bot_token, chat_id, enabled) values (1, p_token, p_chat, coalesce(p_enabled, true))
+  on conflict (id) do update set
+    bot_token = case when p_token <> '' then p_token else private.tg_config.bot_token end,
+    chat_id = p_chat, enabled = coalesce(p_enabled, true);
+end $$;
+
+create or replace function public.tg_test()
+returns bigint language plpgsql security definer set search_path = public, private as $$
+begin
+  if not public.is_admin() then raise exception 'forbidden'; end if;
+  return private.tg_call('sendMessage', jsonb_build_object('text', '✅ Уведомления <b>TOFA3D Studio</b> подключены. Сюда будут приходить новые заказы.', 'parse_mode', 'HTML'));
+end $$;
+
+revoke all on function public.tg_settings() from public, anon;
+revoke all on function public.tg_save(text, text, boolean) from public, anon;
+revoke all on function public.tg_test() from public, anon;
+grant execute on function public.tg_settings() to authenticated;
+grant execute on function public.tg_save(text, text, boolean) to authenticated;
+grant execute on function public.tg_test() to authenticated;

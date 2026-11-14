@@ -647,7 +647,7 @@ const AT = {
 ru:{
  login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
- t_dash:'Обзор',p_sel_all:'Выбрать все',p_sel_none:'Снять все',p_print:'Ссылка для печати (MakerWorld и т.п.)',p_print_hint:'Видишь только ты: в заказе у этого товара появится кнопка «Печатать». Покупатели ссылку не видят.',p_print_bad:'Ссылка должна начинаться с https://',o_print:'Печатать',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте (сначала новые)',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ t_dash:'Обзор',tg_title:'Уведомления в Telegram',tg_help:'1) В Telegram открой @BotFather → /newbot, придумай имя и получи токен. 2) Напиши своему боту любое сообщение (иначе он не сможет тебе писать). 3) Узнай свой ID у @userinfobot (для группы — добавь бота в группу, ID группы начинается с минуса). 4) Вставь токен и ID сюда, сохрани и нажми «Отправить тест».',tg_token:'Токен бота',tg_token_set:'Токен сохранён (введи новый, чтобы заменить)',tg_chat:'Chat ID получателя',tg_on:'Присылать уведомления о новых заказах',tg_test:'Отправить тест',tg_sent:'Отправлено, проверь Telegram',tg_last:'Последняя отправка',tg_ok:'доставлено',tg_fail:'ошибка',tg_bad_token:'Токен не похож на токен бота (вида 123456789:AA…)',tg_bad_chat:'Chat ID — это число (у групп с минусом) или @имя_канала',tg_nonet:'В базе не включено расширение pg_net: запусти schema.sql ещё раз.',p_sel_all:'Выбрать все',p_sel_none:'Снять все',p_print:'Ссылка для печати (MakerWorld и т.п.)',p_print_hint:'Видишь только ты: в заказе у этого товара появится кнопка «Печатать». Покупатели ссылку не видят.',p_print_bad:'Ссылка должна начинаться с https://',o_print:'Печатать',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте (сначала новые)',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
@@ -662,7 +662,7 @@ ru:{
 hu:{
  login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
- t_dash:'Áttekintés',p_sel_all:'Összes',p_sel_none:'Egyik sem',p_print:'Nyomtatási link (MakerWorld stb.)',p_print_hint:'Csak te látod: a rendelésben ennél a terméknél megjelenik a „Nyomtatás” gomb. A vásárlók nem látják.',p_print_bad:'A linknek https://-sel kell kezdődnie.',o_print:'Nyomtatás',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon (legújabb elöl)',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ t_dash:'Áttekintés',tg_title:'Telegram értesítések',tg_help:'1) Telegramban nyisd meg a @BotFather-t → /newbot, adj nevet és kapsz egy tokent. 2) Írj bármit a botodnak (különben nem tud neked írni). 3) Az azonosítódat a @userinfobot mutatja meg (csoportnál add hozzá a botot, a csoport ID mínusszal kezdődik). 4) Másold be ide a tokent és az ID-t, mentsd, majd nyomd meg a „Teszt küldése” gombot.',tg_token:'Bot token',tg_token_set:'Token elmentve (írj be újat a cseréhez)',tg_chat:'Címzett Chat ID',tg_on:'Értesítés új rendelésről',tg_test:'Teszt küldése',tg_sent:'Elküldve, nézd meg a Telegramot',tg_last:'Utolsó küldés',tg_ok:'kézbesítve',tg_fail:'hiba',tg_bad_token:'Ez nem bot token (formátum: 123456789:AA…)',tg_bad_chat:'A Chat ID szám (csoportnál mínusszal) vagy @csatorna_név',tg_nonet:'Az adatbázisban nincs bekapcsolva a pg_net bővítmény: futtasd újra a schema.sql-t.',p_sel_all:'Összes',p_sel_none:'Egyik sem',p_print:'Nyomtatási link (MakerWorld stb.)',p_print_hint:'Csak te látod: a rendelésben ennél a terméknél megjelenik a „Nyomtatás” gomb. A vásárlók nem látják.',p_print_bad:'A linknek https://-sel kell kezdődnie.',o_print:'Nyomtatás',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon (legújabb elöl)',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
@@ -1443,13 +1443,16 @@ function renderAdmin(){
       </tbody></table></div><p id="dMsg" class="err" style="margin-top:8px"></p>
       <h2 class="sub">${a('st_lead')}</h2>
       <form class="form" id="leadForm" style="max-width:360px"><div class="row2"><label class="f">${a('st_from')}<input class="inp" id="leadMin" type="number" min="0" value="${s.leadMin}"></label><label class="f">${a('st_to')}<input class="inp" id="leadMax" type="number" min="0" value="${s.leadMax}"></label></div>
-        <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>`;
+        <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
+      <h2 class="sub">${a('tg_title')}</h2>
+      <div id="tgBox"><p class="small">…</p></div>`;
   }
   box.innerHTML = `<div class="wrap"><div class="vhead"><div><div class="eyebrow">TOFA3D Studio</div><h1>${a('title')}</h1></div>
     <div class="rowbtns"><div class="seg" role="group" aria-label="Admin language"><button data-act="adm-lang" data-l="ru" aria-pressed="${alang === 'ru'}">RU</button><button data-act="adm-lang" data-l="hu" aria-pressed="${alang === 'hu'}">HU</button></div>
     <a class="btn" href="#top">${a('toshop')}</a><button class="btn" data-act="adm-logout">${a('logout')}</button></div></div>
     <div class="tabs">${tabs.map(x => `<button class="opt" data-act="adm-tab" data-tab="${x[0]}" aria-pressed="${adm.tab === x[0]}">${esc(a(x[1]))}</button>`).join('')}</div>${body}</div>`;
   if(adm.tab === 'products') admProdRows(cmap);
+  if(adm.tab === 'settings') renderTg();
 }
 function ordDialog(ref){
   const o = orders().find(x => x.ref === ref); if(!o) return;
@@ -1559,6 +1562,23 @@ function colorDialog(id){
 }
 const homeCfg = () => (Array.isArray(settings().home) ? settings().home : []).map(r => Object.assign({}, r));
 const saveHome = list => save(() => q(sb.from('settings').upsert({id:1, data:Object.assign({}, C.settings, {home:list})})), () => { closeDlg(); renderAdmin(); });
+/* ---------- Telegram notifications (settings tab) ---------- */
+async function renderTg(){
+  const box = $('#tgBox'); if(!box) return;
+  let st; try { st = await q(sb.rpc('tg_settings')); } catch(e){ box.innerHTML = `<p class="err">${esc(a('err'))}: ${esc(e.message || e)}</p>`; return; }
+  if(!$('#tgBox')) return;
+  const last = st.last ? (st.last.status === 200 ? `<span class="st active">${a('tg_ok')}</span>` : `<span class="st off">${esc(a('tg_fail'))} ${esc(String(st.last.status || ''))}</span> <span class="small mono">${esc(String(st.last.body || '').slice(0, 160))}</span>`) : '';
+  box.innerHTML = `<p class="small" style="max-width:640px;margin-bottom:10px">${a('tg_help')}</p>
+    ${st.net ? '' : `<p class="err" style="margin-bottom:8px">${esc(a('tg_nonet'))}</p>`}
+    <form class="form" id="tgForm" style="max-width:420px" novalidate autocomplete="off">
+      <label class="f">${a('tg_token')}<input class="inp" id="tgToken" type="password" autocomplete="new-password" placeholder="${st.token_set ? esc(a('tg_token_set')) : '123456789:AA…'}"></label>
+      <label class="f">${a('tg_chat')}<input class="inp" id="tgChat" inputmode="numeric" value="${esc(st.chat_id)}" placeholder="123456789"></label>
+      <label class="ck"><input type="checkbox" id="tgOn" ${st.enabled ? 'checked' : ''}> ${a('tg_on')}</label>
+      <p id="tgMsg" class="err"></p>
+      <div class="rowbtns"><button class="btn primary">${a('save')}</button><button type="button" class="btn" data-act="tg-test" ${st.configured ? '' : 'disabled'}>${a('tg_test')}</button></div>
+      ${last ? `<p class="small">${a('tg_last')}: ${last}</p>` : ''}
+    </form>`;
+}
 function homePickHTML(cat, picked){
   const list = products().filter(p => p.cat === cat && p.active);
   if(!list.length) return `<p class="small">${esc(a('h_noprod'))}</p>`;
@@ -1675,6 +1695,10 @@ const ACT = {
   'p-edit':el => productDialog(el.dataset.id),
   'p-del':el => { const p = prod(el.dataset.id), keys = (p && p.photos || []).filter(x => x.k).flatMap(x => [x.k + '.jpg', x.k + '_t.jpg']);
     save(async () => { await q(sb.from('products').delete().eq('id', el.dataset.id)); if(keys.length) await sb.storage.from('products').remove(keys); }); },
+  'tg-test':async el => {
+    el.disabled = true; try { await q(sb.rpc('tg_test')); msg('tgMsg', a('tg_sent'), true); } catch(e){ msg('tgMsg', e.message || a('err')); }
+    setTimeout(() => renderTg().then(() => msg('tgMsg', a('tg_sent'), true)), 2500);
+  },
   'pm-all':el => $$('#pForm .pm').forEach(x => x.checked = el.dataset.v === '1'),
   'pc-all':el => $$('#pForm .pc').forEach(x => x.checked = el.dataset.v === '1'),
   'lb-open':el => lbOpen(+el.dataset.i),
@@ -1834,6 +1858,11 @@ const FORMS = {
     const prev = old ? list.find(x => x.id === old) : null;
     const row = {id:old || 'c' + uid(), name, hex, sort:prev ? prev.sort : list.length};
     save(() => q(sb.from('colors').upsert(MAP.colors.to(row))), () => { closeDlg(); renderAdmin(); });
+  },
+  tgForm:async () => {
+    try { await q(sb.rpc('tg_save', {p_token:$('#tgToken').value.trim(), p_chat:$('#tgChat').value.trim(), p_enabled:$('#tgOn').checked})); }
+    catch(e){ const m = String(e.message || ''); return msg('tgMsg', m.includes('bad_token') ? a('tg_bad_token') : m.includes('bad_chat') ? a('tg_bad_chat') : m); }
+    await renderTg(); msg('tgMsg', a('saved'), true);
   },
   hForm:e => {
     const i = +e.target.dataset.i, rows = homeCfg(), title = {};
