@@ -382,6 +382,17 @@ grant execute on function public.is_admin() to anon, authenticated;
 grant execute on function public.my_coupons() to authenticated;
 grant execute on function public.add_coupon(text) to authenticated;
 
+-- ============ Служебные данные товаров (видит только админ) ============
+-- Ссылка на модель для печати (MakerWorld и т.п.): покупателям не показывается.
+create table if not exists public.product_admin (
+  pid        text primary key references public.products on delete cascade on update cascade,
+  print_url  text not null default '' check (char_length(print_url) <= 500 and (print_url = '' or print_url ~ '^https://'))
+);
+alter table public.product_admin enable row level security;
+drop policy if exists product_admin_all on public.product_admin;
+create policy product_admin_all on public.product_admin for all using (public.is_admin()) with check (public.is_admin());
+grant select, insert, update, delete on public.product_admin to authenticated;
+
 -- ============ Фото товаров (Supabase Storage) ============
 -- Публичная корзина «products»: смотреть фото может любой, загружать и удалять только админ.
 do $$

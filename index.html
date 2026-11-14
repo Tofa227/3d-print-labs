@@ -158,6 +158,7 @@ section.sec{padding-block:72px 0}
 .phbtns{display:flex;gap:4px}.phbtns .btn.icon{width:30px;height:28px;min-height:0}
 .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .admfilters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}.admfilters .f{min-width:150px}.admfilters #apQ{flex:1 1 200px;max-width:320px}
+.printbtn{margin-left:8px;padding:2px 10px;min-height:0;text-decoration:none;vertical-align:middle}
 .cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -452,7 +453,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
 const SBC = window.__SB || {url:'https://suxnqplokgmxjmviazfr.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eG5xcGxva2dteGptdmlhemZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1Mjk5MDQsImV4cCI6MjExMDEwNTkwNH0.ov-dAIqbjGB2HolrBNMT-aTicxuzx9a6L_3TNhbM0KI'};
 const sb = window.supabase ? window.supabase.createClient(SBC.url, SBC.key, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}}) : null;
-const C = {products:[], cats:[], mats:[], colors:[], delivery:[], settings:{}, coupons:[], myCoupons:[], orders:[], users:[]};
+const C = {printUrl:{}, products:[], cats:[], mats:[], colors:[], delivery:[], settings:{}, coupons:[], myCoupons:[], orders:[], users:[]};
 let ME = null;
 async function q(p){ const r = await p; if(r.error) throw r.error; return r.data; }
 const nz = a => Array.isArray(a) && a.length ? a : null;
@@ -491,7 +492,8 @@ async function loadMe(){
   if(adminOn){
     const [k, u] = await Promise.all([q(sb.from('coupons').select('*').order('code')), q(sb.from('profiles').select('*').order('created_at', {ascending:false}))]);
     C.coupons = k.map(MAP.coupons.from); C.users = u.map(MAP.profiles.from);
-    const notes = await q(sb.from('order_notes').select('*')), nm = {}; notes.forEach(n => nm[n.ref] = n.note);
+    const [notes, pa] = await Promise.all([q(sb.from('order_notes').select('*')), q(sb.from('product_admin').select('*'))]), nm = {};
+    notes.forEach(n => nm[n.ref] = n.note); C.printUrl = {}; pa.forEach(x => { if(x.print_url) C.printUrl[x.pid] = x.print_url; });
     C.orders.forEach(o => o.inote = nm[o.ref] || '');
   } else { C.coupons = C.myCoupons; C.users = [ME]; }
 }
@@ -626,7 +628,7 @@ const AT = {
 ru:{
  login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
- t_dash:'Обзор',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ t_dash:'Обзор',p_print:'Ссылка для печати (MakerWorld и т.п.)',p_print_hint:'Видишь только ты: в заказе у этого товара появится кнопка «Печатать». Покупатели ссылку не видят.',p_print_bad:'Ссылка должна начинаться с https://',o_print:'Печатать',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
@@ -641,7 +643,7 @@ ru:{
 hu:{
  login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
- t_dash:'Áttekintés',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ t_dash:'Áttekintés',p_print:'Nyomtatási link (MakerWorld stb.)',p_print_hint:'Csak te látod: a rendelésben ennél a terméknél megjelenik a „Nyomtatás” gomb. A vásárlók nem látják.',p_print_bad:'A linknek https://-sel kell kezdődnie.',o_print:'Nyomtatás',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
@@ -1420,7 +1422,7 @@ function ordDialog(ref){
       <div><span>${a('o_deliv')}</span><span>${esc(L(o.delivery.name, alang))}${o.addr ? ' · ' + esc(o.addr) : ''}</span></div>
       ${o.note ? `<div><span>${a('o_note')}</span><span>${esc(o.note)}</span></div>` : ''}</div>
     <div class="lbl">${a('o_items')}</div>
-    <div class="kv" style="margin-bottom:12px">${o.items.map(l => `<div><span>${esc(L(l.name, alang))} × ${l.qty}</span><span class="mono">${esc(l.mat)} · ${esc(colName(l.color))} · ${fmt(l.unit * l.qty)}</span></div>`).join('')}
+    <div class="kv" style="margin-bottom:12px">${o.items.map(l => { const pu = C.printUrl[l.pid]; return `<div><span>${esc(L(l.name, alang))} × ${l.qty}${pu && /^https:\/\//i.test(pu) ? ` <a class="btn sm primary printbtn" href="${esc(pu)}" target="_blank" rel="noopener noreferrer">🖨 ${a('o_print')}</a>` : ''}</span><span class="mono">${esc(l.mat)} · ${esc(colName(l.color))} · ${fmt(l.unit * l.qty)}</span></div>`; }).join('')}
       <div><span>${a('o_sub')}</span><span class="mono">${fmt(o.subtotal)}</span></div>
       ${o.coupon ? `<div><span>${a('o_coupon')} ${esc(o.coupon.code)}</span><span class="mono">−${fmt(o.coupon.discount)}</span></div>` : ''}
       <div><span>${a('o_fee')}</span><span class="mono">${fmt(o.delivery.fee)}</span></div>
@@ -1448,6 +1450,8 @@ function productDialog(id){
     <label class="f">${a('p_price')}<input class="inp" id="pfPrice" type="number" min="1" value="${p ? p.price : ''}"></label></div>
     <div><div class="lbl">${a('p_dims')}</div><div class="row3">${[['w','p_w'],['d','p_d'],['h','p_h']].map(([k, lb]) => `<label class="f">${a(lb)}<input class="inp" id="pfD_${k}" type="text" inputmode="decimal" maxlength="7" value="${p && p.dims && p.dims[k] ? p.dims[k] : ''}" placeholder="${p ? esc((dimText(p.shape).match(/[\d.]+/g) || [])[{w:0, d:1, h:2}[k]] || '') : ''}"></label>`).join('')}</div>
       <p class="small" style="margin-top:4px">${a('p_dims_hint')}</p></div>
+    <label class="f">${a('p_print')}<input class="inp" id="pfPrint" type="url" inputmode="url" maxlength="500" placeholder="https://makerworld.com/…" value="${esc(p ? C.printUrl[p.id] || '' : '')}"></label>
+    <p class="small" style="margin-top:-6px">${a('p_print_hint')}</p>
     <div><div class="lbl">${a('p_mats')}</div><div class="chips">${mats().map(m => `<label class="ck"><input type="checkbox" class="pm" value="${esc(m.id)}" ${!p || !(p.mats || []).length || p.mats.includes(m.id) ? 'checked' : ''}> ${esc(m.id)}</label>`).join('')}</div></div>
     <div><div class="lbl">${a('p_colors')}</div><div class="chips">${colors().map(c => `<label class="ck"><input type="checkbox" class="pc" value="${esc(c.id)}" ${!p || !(p.colors || []).length || p.colors.includes(c.id) ? 'checked' : ''}> <span class="thumb" style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${esc(c.hex)};border:1px solid var(--line)"></span>${esc(L(c.name, alang))}</label>`).join('')}</div></div>
     <label class="ck"><input type="checkbox" id="pfActive" ${!p || p.active ? 'checked' : ''}> ${a('p_active')}</label>
@@ -1750,6 +1754,7 @@ const FORMS = {
     if(!pm.length || !pc.length) return msg('pfErr', a('p_mc_req'));
     const dv = {}; ['w','d','h'].forEach(k => { const v = parseFloat(String($('#pfD_' + k).value).replace(',', '.')); if(v > 0) dv[k] = Math.round(v * 10) / 10; });
     const dn = Object.keys(dv).length; if(dn && dn < 3) return msg('pfErr', a('p_dims_bad'));
+    const purl = $('#pfPrint').value.trim(); if(purl && !/^https:\/\/[^\s]+$/i.test(purl)) return msg('pfErr', a('p_print_bad'));
     const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:'', dims:dn ? dv : null};
     const pid = id || 'p' + uid(), btn = $('#pForm .btn.primary');
     if(btn){ btn.disabled = true; btn.textContent = a('p_uploading'); }
@@ -1757,6 +1762,7 @@ const FORMS = {
       try { data.photos = await syncPhotos(pid); }
       catch(err){ if(btn){ btn.disabled = false; btn.textContent = a('save'); } throw err; }
       await q(sb.from('products').upsert(MAP.products.to(Object.assign({id:pid, sort:old ? old.sort : products().length}, data))));
+      if(purl || C.printUrl[pid]) await q(sb.from('product_admin').upsert({pid, print_url:purl}));
     }, () => { closeDlg(); renderAdmin(); });
   },
   mtForm:e => {
