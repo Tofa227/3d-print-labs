@@ -392,6 +392,20 @@ alter table public.product_admin enable row level security;
 drop policy if exists product_admin_all on public.product_admin;
 create policy product_admin_all on public.product_admin for all using (public.is_admin()) with check (public.is_admin());
 grant select, insert, update, delete on public.product_admin to authenticated;
+-- Данные для расчёта цены: вес модели, время печати, наценка (видит только админ).
+alter table public.product_admin add column if not exists weight_g numeric check (weight_g is null or (weight_g >= 0 and weight_g < 100000));
+alter table public.product_admin add column if not exists print_min int check (print_min is null or (print_min >= 0 and print_min < 100000));
+alter table public.product_admin add column if not exists markup int check (markup is null or (markup >= 0 and markup <= 1000));
+
+-- Закрытые настройки админа (себестоимость: цена филамента, стоимость часа печати и т.п.).
+create table if not exists public.admin_settings (
+  id    int primary key default 1 check (id = 1),
+  data  jsonb not null default '{}' check (pg_column_size(data) < 20000)
+);
+alter table public.admin_settings enable row level security;
+drop policy if exists admin_settings_all on public.admin_settings;
+create policy admin_settings_all on public.admin_settings for all using (public.is_admin()) with check (public.is_admin());
+grant select, insert, update, delete on public.admin_settings to authenticated;
 
 -- ============ Фото товаров (Supabase Storage) ============
 -- Публичная корзина «products»: смотреть фото может любой, загружать и удалять только админ.

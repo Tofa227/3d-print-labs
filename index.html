@@ -173,6 +173,10 @@ section.sec{padding-block:72px 0}
 .lb-prev,.lb-next{position:absolute;top:50%;transform:translateY(-50%)}.lb-prev{left:max(12px,env(safe-area-inset-left,0px))}.lb-next{right:max(12px,env(safe-area-inset-right,0px))}
 @media (max-width:760px){.lb-prev,.lb-next{display:none}}
 .lb.zoomed .lb-prev,.lb.zoomed .lb-next{display:none}
+.pcalc{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:10px;margin:0;min-width:0}
+.pcalc legend{padding:0 6px;font-weight:600;color:var(--accent)}
+.range{width:100%;accent-color:var(--accent);margin-top:6px}
+.pc-kv>div{padding:5px 0}.pc-res{border-top:1px solid var(--line);margin-top:4px;padding-top:8px!important;color:var(--accent)}
 .cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -472,7 +476,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e){} };
 const SBC = window.__SB || {url:'https://suxnqplokgmxjmviazfr.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1eG5xcGxva2dteGptdmlhemZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1Mjk5MDQsImV4cCI6MjExMDEwNTkwNH0.ov-dAIqbjGB2HolrBNMT-aTicxuzx9a6L_3TNhbM0KI'};
 const sb = window.supabase ? window.supabase.createClient(SBC.url, SBC.key, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}}) : null;
-const C = {printUrl:{}, products:[], cats:[], mats:[], colors:[], delivery:[], settings:{}, coupons:[], myCoupons:[], orders:[], users:[]};
+const C = {printUrl:{}, pAdmin:{}, cost:{}, products:[], cats:[], mats:[], colors:[], delivery:[], settings:{}, coupons:[], myCoupons:[], orders:[], users:[]};
 let ME = null;
 async function q(p){ const r = await p; if(r.error) throw r.error; return r.data; }
 const nz = a => Array.isArray(a) && a.length ? a : null;
@@ -511,8 +515,10 @@ async function loadMe(){
   if(adminOn){
     const [k, u] = await Promise.all([q(sb.from('coupons').select('*').order('code')), q(sb.from('profiles').select('*').order('created_at', {ascending:false}))]);
     C.coupons = k.map(MAP.coupons.from); C.users = u.map(MAP.profiles.from);
-    const [notes, pa] = await Promise.all([q(sb.from('order_notes').select('*')), q(sb.from('product_admin').select('*'))]), nm = {};
-    notes.forEach(n => nm[n.ref] = n.note); C.printUrl = {}; pa.forEach(x => { if(x.print_url) C.printUrl[x.pid] = x.print_url; });
+    const [notes, pa, as] = await Promise.all([q(sb.from('order_notes').select('*')), q(sb.from('product_admin').select('*')), q(sb.from('admin_settings').select('*').eq('id', 1).maybeSingle())]), nm = {};
+    notes.forEach(n => nm[n.ref] = n.note); C.printUrl = {}; C.pAdmin = {};
+    pa.forEach(x => { C.pAdmin[x.pid] = x; if(x.print_url) C.printUrl[x.pid] = x.print_url; });
+    C.cost = as ? as.data : {};
     C.orders.forEach(o => o.inote = nm[o.ref] || '');
   } else { C.coupons = C.myCoupons; C.users = [ME]; }
 }
@@ -647,7 +653,7 @@ const AT = {
 ru:{
  login_t:'Вход для администратора',t_mats:'Материалы и цвета',mt_mat:'Материалы',mt_color:'Цвета',mt_name:'Название материала',mt_pct:'Наценка к цене, %',mt_S:'Прочность (1–5)',mt_H:'Нагрев (1–5)',mt_F:'Гибкость (1–5)',mt_temp:'Термостойкость, °C',mt_use:'Для чего',mt_new:'Новый материал',cl_new:'Новый цвет',cl_name:'Название цвета',cl_hex:'Оттенок',mt_last:'Нельзя удалить последний.',mt_dup:'Такой материал уже есть.',mt_req:'Укажи название.',p_mats:'Материалы товара',p_colors:'Цвета товара',p_mc_req:'Выбери хотя бы один материал и один цвет.',login:'Логин',pass:'Пароль',enter:'Войти',bad:'Неверные учётные данные',demo:'Войди под аккаунтом, которому выдана роль администратора.',no_rights:'У этого аккаунта нет прав администратора.',err:'Ошибка сохранения',u_note:'Удалить аккаунт или сменить пароль покупателя можно в Supabase → Authentication → Users.',
  title:'Админ-панель',logout:'Выйти',toshop:'В магазин',save:'Сохранить',cancel:'Отмена',sure:'Точно?',del:'Удалить',edit:'Изменить',add:'Добавить',open:'Открыть',close:'Закрыть',none:'Пусто',saved:'Сохранено.',yes:'Да',no:'Нет',
- t_dash:'Обзор',tg_title:'Уведомления в Telegram',tg_help:'1) В Telegram открой @BotFather → /newbot, придумай имя и получи токен. 2) Напиши своему боту любое сообщение (иначе он не сможет тебе писать). 3) Узнай свой ID у @userinfobot (для группы — добавь бота в группу, ID группы начинается с минуса). 4) Вставь токен и ID сюда, сохрани и нажми «Отправить тест».',tg_token:'Токен бота',tg_token_set:'Токен сохранён (введи новый, чтобы заменить)',tg_chat:'Chat ID получателя',tg_on:'Присылать уведомления о новых заказах',tg_test:'Отправить тест',tg_sent:'Отправлено, проверь Telegram',tg_last:'Последняя отправка',tg_ok:'доставлено',tg_fail:'ошибка',tg_bad_token:'Токен не похож на токен бота (вида 123456789:AA…)',tg_bad_chat:'Chat ID — это число (у групп с минусом) или @имя_канала',tg_nonet:'В базе не включено расширение pg_net: запусти schema.sql ещё раз.',p_sel_all:'Выбрать все',p_sel_none:'Снять все',p_print:'Ссылка для печати (MakerWorld и т.п.)',p_print_hint:'Видишь только ты: в заказе у этого товара появится кнопка «Печатать». Покупатели ссылку не видят.',p_print_bad:'Ссылка должна начинаться с https://',o_print:'Печатать',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте (сначала новые)',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
+ t_dash:'Обзор',pc_title:'Калькулятор цены',pc_weight:'Вес модели, г',pc_hours:'Время печати, ч',pc_mins:'мин',pc_markup:'Наценка',pc_empty:'Введи вес и время печати из слайсера (Bambu Studio показывает их после нарезки).',pc_fil:'Филамент',pc_time:'Печать',pc_h:'ч',pc_m:'мин',pc_fixed:'Упаковка и прочее',pc_cost:'Себестоимость',pc_price:'Рекомендуемая цена',pc_profit:'Прибыль с одной штуки',pc_use:'Поставить цену',pc_cur:'Сейчас стоит {p}: это наценка {m} %',pc_hint:'Цена считается для базового материала (PLA). Для других материалов на сайте автоматически добавляется их надбавка. Вес и время видишь только ты.',cs_title:'Себестоимость (для калькулятора цены)',cs_help:'Эти цифры видишь только ты. Калькулятор в карточке товара считает по ним себестоимость.',cs_fil:'Филамент, Ft за 1 кг',cs_hour:'Час печати, Ft (электричество, износ)',cs_fixed:'Упаковка и прочее на 1 шт., Ft',cs_markup:'Наценка по умолчанию, %',cs_round:'Округлять цену до',tg_title:'Уведомления в Telegram',tg_help:'1) В Telegram открой @BotFather → /newbot, придумай имя и получи токен. 2) Напиши своему боту любое сообщение (иначе он не сможет тебе писать). 3) Узнай свой ID у @userinfobot (для группы — добавь бота в группу, ID группы начинается с минуса). 4) Вставь токен и ID сюда, сохрани и нажми «Отправить тест».',tg_token:'Токен бота',tg_token_set:'Токен сохранён (введи новый, чтобы заменить)',tg_chat:'Chat ID получателя',tg_on:'Присылать уведомления о новых заказах',tg_test:'Отправить тест',tg_sent:'Отправлено, проверь Telegram',tg_last:'Последняя отправка',tg_ok:'доставлено',tg_fail:'ошибка',tg_bad_token:'Токен не похож на токен бота (вида 123456789:AA…)',tg_bad_chat:'Chat ID — это число (у групп с минусом) или @имя_канала',tg_nonet:'В базе не включено расширение pg_net: запусти schema.sql ещё раз.',p_sel_all:'Выбрать все',p_sel_none:'Снять все',p_print:'Ссылка для печати (MakerWorld и т.п.)',p_print_hint:'Видишь только ты: в заказе у этого товара появится кнопка «Печатать». Покупатели ссылку не видят.',p_print_bad:'Ссылка должна начинаться с https://',o_print:'Печатать',c_order_note:'Стрелками ↑ ↓ меняется порядок категорий в каталоге и на главной (если ряды не настроены вручную).',p_search:'Поиск по названию',p_all:'Все',p_nocat:'Без категории',p_status:'Статус',p_visible:'Видимые',p_sort:'Сортировка',ps_order:'Как на сайте (сначала новые)',ps_name:'По названию (А→Я)',ps_pa:'Сначала дешёвые',ps_pd:'Сначала дорогие',ps_nw:'Сначала новые',ps_cat:'По категории',p_shown:'Показано {n} из {m}',t_home:'Главная',h_note:'Ряды товаров на главной странице, сверху вниз. Если рядов нет, на главной по одному ряду на каждую категорию.',h_cat:'Категория',h_title:'Заголовок (если пусто — название категории)',h_limit:'Сколько товаров в ряду',h_pick:'Выбрать товары вручную (если ничего не отмечено — первые товары категории)',h_on:'Показывать на главной',h_new:'Новый ряд',h_auto:'авто',h_picked:'выбрано: {n}',h_empty:'Рядов пока нет, поэтому на главной показаны все категории по порядку.',h_nocat:'Сначала создай категорию.',h_noprod:'В этой категории пока нет видимых товаров.',t_orders:'Заказы',t_products:'Товары',t_cats:'Категории',t_users:'Клиенты',t_coupons:'Купоны',t_settings:'Настройки',
  s_new:'Новые заказы',s_rev:'Выручка без отменённых',s_orders:'Всего заказов',s_users:'Клиентов',s_products:'Товаров',recent:'Последние заказы',
  ref:'№',date:'Дата',cust:'Клиент',phone:'Телефон',sum:'Сумма',status:'Статус',all:'Все',
  o_items:'Состав',o_deliv:'Получение',o_coupon:'Купон',o_note:'Комментарий клиента',o_inote:'Внутренняя заметка',o_hist:'История',o_user:'Аккаунт',o_guest:'Гость',o_sub:'Сумма товаров',o_fee:'Доставка',o_disc:'Скидка',o_total:'Итого',
@@ -662,7 +668,7 @@ ru:{
 hu:{
  login_t:'Adminisztrátori belépés',t_mats:'Anyagok és színek',mt_mat:'Anyagok',mt_color:'Színek',mt_name:'Anyag neve',mt_pct:'Felár, %',mt_S:'Szilárdság (1–5)',mt_H:'Hőállóság (1–5)',mt_F:'Rugalmasság (1–5)',mt_temp:'Hőállóság, °C',mt_use:'Mire jó',mt_new:'Új anyag',cl_new:'Új szín',cl_name:'Szín neve',cl_hex:'Árnyalat',mt_last:'Az utolsót nem lehet törölni.',mt_dup:'Ilyen anyag már van.',mt_req:'Add meg a nevet.',p_mats:'A termék anyagai',p_colors:'A termék színei',p_mc_req:'Válassz legalább egy anyagot és egy színt.',login:'Felhasználónév',pass:'Jelszó',enter:'Belépés',bad:'Hibás belépési adatok',demo:'Lépj be azzal a fiókkal, amelyik admin jogot kapott.',no_rights:'Ennek a fióknak nincs admin joga.',err:'Mentési hiba',u_note:'Vásárlói fiók törlése vagy jelszócseréje: Supabase → Authentication → Users.',
  title:'Admin panel',logout:'Kilépés',toshop:'Az üzletbe',save:'Mentés',cancel:'Mégse',sure:'Biztos?',del:'Törlés',edit:'Szerkesztés',add:'Hozzáadás',open:'Megnyitás',close:'Bezár',none:'Üres',saved:'Mentve.',yes:'Igen',no:'Nem',
- t_dash:'Áttekintés',tg_title:'Telegram értesítések',tg_help:'1) Telegramban nyisd meg a @BotFather-t → /newbot, adj nevet és kapsz egy tokent. 2) Írj bármit a botodnak (különben nem tud neked írni). 3) Az azonosítódat a @userinfobot mutatja meg (csoportnál add hozzá a botot, a csoport ID mínusszal kezdődik). 4) Másold be ide a tokent és az ID-t, mentsd, majd nyomd meg a „Teszt küldése” gombot.',tg_token:'Bot token',tg_token_set:'Token elmentve (írj be újat a cseréhez)',tg_chat:'Címzett Chat ID',tg_on:'Értesítés új rendelésről',tg_test:'Teszt küldése',tg_sent:'Elküldve, nézd meg a Telegramot',tg_last:'Utolsó küldés',tg_ok:'kézbesítve',tg_fail:'hiba',tg_bad_token:'Ez nem bot token (formátum: 123456789:AA…)',tg_bad_chat:'A Chat ID szám (csoportnál mínusszal) vagy @csatorna_név',tg_nonet:'Az adatbázisban nincs bekapcsolva a pg_net bővítmény: futtasd újra a schema.sql-t.',p_sel_all:'Összes',p_sel_none:'Egyik sem',p_print:'Nyomtatási link (MakerWorld stb.)',p_print_hint:'Csak te látod: a rendelésben ennél a terméknél megjelenik a „Nyomtatás” gomb. A vásárlók nem látják.',p_print_bad:'A linknek https://-sel kell kezdődnie.',o_print:'Nyomtatás',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon (legújabb elöl)',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
+ t_dash:'Áttekintés',pc_title:'Árkalkulátor',pc_weight:'Modell súlya, g',pc_hours:'Nyomtatási idő, óra',pc_mins:'perc',pc_markup:'Árrés',pc_empty:'Írd be a súlyt és a nyomtatási időt a szeletelőből (a Bambu Studio szeletelés után mutatja).',pc_fil:'Filament',pc_time:'Nyomtatás',pc_h:'ó',pc_m:'p',pc_fixed:'Csomagolás és egyéb',pc_cost:'Önköltség',pc_price:'Javasolt ár',pc_profit:'Haszon darabonként',pc_use:'Ár beállítása',pc_cur:'Most {p}: ez {m} % árrés',pc_hint:'Az ár az alap anyagra (PLA) vonatkozik; más anyagoknál az oldal automatikusan hozzáadja a felárat. A súlyt és az időt csak te látod.',cs_title:'Önköltség (az árkalkulátorhoz)',cs_help:'Ezeket a számokat csak te látod. A termékkártyán lévő kalkulátor ezekből számol önköltséget.',cs_fil:'Filament, Ft / 1 kg',cs_hour:'Nyomtatási óra, Ft (áram, kopás)',cs_fixed:'Csomagolás és egyéb / db, Ft',cs_markup:'Alapértelmezett árrés, %',cs_round:'Ár kerekítése',tg_title:'Telegram értesítések',tg_help:'1) Telegramban nyisd meg a @BotFather-t → /newbot, adj nevet és kapsz egy tokent. 2) Írj bármit a botodnak (különben nem tud neked írni). 3) Az azonosítódat a @userinfobot mutatja meg (csoportnál add hozzá a botot, a csoport ID mínusszal kezdődik). 4) Másold be ide a tokent és az ID-t, mentsd, majd nyomd meg a „Teszt küldése” gombot.',tg_token:'Bot token',tg_token_set:'Token elmentve (írj be újat a cseréhez)',tg_chat:'Címzett Chat ID',tg_on:'Értesítés új rendelésről',tg_test:'Teszt küldése',tg_sent:'Elküldve, nézd meg a Telegramot',tg_last:'Utolsó küldés',tg_ok:'kézbesítve',tg_fail:'hiba',tg_bad_token:'Ez nem bot token (formátum: 123456789:AA…)',tg_bad_chat:'A Chat ID szám (csoportnál mínusszal) vagy @csatorna_név',tg_nonet:'Az adatbázisban nincs bekapcsolva a pg_net bővítmény: futtasd újra a schema.sql-t.',p_sel_all:'Összes',p_sel_none:'Egyik sem',p_print:'Nyomtatási link (MakerWorld stb.)',p_print_hint:'Csak te látod: a rendelésben ennél a terméknél megjelenik a „Nyomtatás” gomb. A vásárlók nem látják.',p_print_bad:'A linknek https://-sel kell kezdődnie.',o_print:'Nyomtatás',c_order_note:'A ↑ ↓ nyilakkal változik a kategóriák sorrendje a katalógusban és a főoldalon (ha a sorok nincsenek kézzel beállítva).',p_search:'Keresés név szerint',p_all:'Mind',p_nocat:'Kategória nélkül',p_status:'Állapot',p_visible:'Látható',p_sort:'Rendezés',ps_order:'Ahogy az oldalon (legújabb elöl)',ps_name:'Név szerint (A→Z)',ps_pa:'Legolcsóbb elöl',ps_pd:'Legdrágább elöl',ps_nw:'Legújabb elöl',ps_cat:'Kategória szerint',p_shown:'{n} / {m} látható',t_home:'Főoldal',h_note:'Termék-sorok a főoldalon, fentről lefelé. Ha nincs sor, minden kategória kap egy sort.',h_cat:'Kategória',h_title:'Cím (ha üres, a kategória neve)',h_limit:'Termékek száma a sorban',h_pick:'Termékek kézi kiválasztása (ha semmi sincs bejelölve, a kategória első termékei)',h_on:'Látható a főoldalon',h_new:'Új sor',h_auto:'auto',h_picked:'kiválasztva: {n}',h_empty:'Még nincs sor, ezért a főoldalon minden kategória látszik sorban.',h_nocat:'Előbb hozz létre kategóriát.',h_noprod:'Ebben a kategóriában még nincs látható termék.',t_orders:'Rendelések',t_products:'Termékek',t_cats:'Kategóriák',t_users:'Ügyfelek',t_coupons:'Kuponok',t_settings:'Beállítások',
  s_new:'Új rendelések',s_rev:'Bevétel lemondottak nélkül',s_orders:'Összes rendelés',s_users:'Ügyfelek',s_products:'Termékek',recent:'Legutóbbi rendelések',
  ref:'#',date:'Dátum',cust:'Ügyfél',phone:'Telefon',sum:'Összeg',status:'Állapot',all:'Mind',
  o_items:'Tételek',o_deliv:'Átvétel',o_coupon:'Kupon',o_note:'Ügyfél megjegyzése',o_inote:'Belső jegyzet',o_hist:'Előzmények',o_user:'Fiók',o_guest:'Vendég',o_sub:'Részösszeg',o_fee:'Szállítás',o_disc:'Kedvezmény',o_total:'Összesen',
@@ -1444,6 +1450,13 @@ function renderAdmin(){
       <h2 class="sub">${a('st_lead')}</h2>
       <form class="form" id="leadForm" style="max-width:360px"><div class="row2"><label class="f">${a('st_from')}<input class="inp" id="leadMin" type="number" min="0" value="${s.leadMin}"></label><label class="f">${a('st_to')}<input class="inp" id="leadMax" type="number" min="0" value="${s.leadMax}"></label></div>
         <p id="leadMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
+      <h2 class="sub">${a('cs_title')}</h2>
+      <form class="form" id="costForm" style="max-width:520px" novalidate>
+        <p class="small">${a('cs_help')}</p>
+        <div class="row2"><label class="f">${a('cs_fil')}<input class="inp" id="csFil" type="number" min="0" value="${costCfg().fil}"></label><label class="f">${a('cs_hour')}<input class="inp" id="csHour" type="number" min="0" value="${costCfg().hour}"></label></div>
+        <div class="row2"><label class="f">${a('cs_fixed')}<input class="inp" id="csFixed" type="number" min="0" value="${costCfg().fixed}"></label><label class="f">${a('cs_markup')}<input class="inp" id="csMk" type="number" min="0" max="1000" value="${costCfg().markup}"></label></div>
+        <label class="f">${a('cs_round')}<select class="inp" id="csRound">${[1, 10, 50, 100].map(v => `<option value="${v}" ${+costCfg().round === v ? 'selected' : ''}>${v} Ft</option>`).join('')}</select></label>
+        <p id="csMsg" class="ok"></p><button class="btn primary" style="justify-self:start">${a('save')}</button></form>
       <h2 class="sub">${a('tg_title')}</h2>
       <div id="tgBox"><p class="small">…</p></div>`;
   }
@@ -1491,7 +1504,14 @@ function productDialog(id){
     ${['hu','en','ru'].map(l => `<label class="f">${a('p_name')} ${l.toUpperCase()}<input class="inp" id="pfn_${l}" value="${esc(p ? p.name[l] : '')}"></label>`).join('')}
     ${['hu','en','ru'].map(l => `<label class="f">${a('p_desc')} ${l.toUpperCase()}<textarea class="inp" id="pfd_${l}" rows="2">${esc(p ? p.desc[l] : '')}</textarea></label>`).join('')}
     <div class="row2"><label class="f">${a('p_cat')}<select class="inp" id="pfCat">${cats().map(c => `<option value="${esc(c.id)}" ${p && p.cat === c.id ? 'selected' : ''}>${esc(L(c.name, alang))}</option>`).join('')}</select></label>
-    <label class="f">${a('p_price')}<input class="inp" id="pfPrice" type="number" min="1" value="${p ? p.price : ''}"></label></div>
+    <label class="f">${a('p_price')}<input class="inp" id="pfPrice" type="number" min="1" value="${p ? p.price : ''}" data-on="calc"></label></div>
+    ${(() => { const pa = (p && C.pAdmin[p.id]) || {}, mk = pa.markup != null ? pa.markup : costCfg().markup, pm = pa.print_min || 0;
+      return `<fieldset class="pcalc"><legend>${a('pc_title')}</legend>
+      <div class="row3"><label class="f">${a('pc_weight')}<input class="inp" id="pcW" type="text" inputmode="decimal" maxlength="8" value="${pa.weight_g != null ? pa.weight_g : ''}" placeholder="45,3" data-on="calc"></label>
+        <label class="f">${a('pc_hours')}<input class="inp" id="pcH" type="number" min="0" max="999" value="${pm ? Math.floor(pm / 60) : ''}" placeholder="2" data-on="calc"></label>
+        <label class="f">${a('pc_mins')}<input class="inp" id="pcM" type="number" min="0" max="59" value="${pm ? pm % 60 : ''}" placeholder="35" data-on="calc"></label></div>
+      <label class="f">${a('pc_markup')} <b id="pcMkV" class="mono">${mk} %</b><input id="pcMk" type="range" min="0" max="300" step="5" value="${mk}" data-on="calc" class="range"></label>
+      <div id="pcOut"></div><p class="small">${a('pc_hint')}</p></fieldset>`; })()}
     <div><div class="lbl">${a('p_dims')}</div><div class="row3">${[['w','p_w'],['d','p_d'],['h','p_h']].map(([k, lb]) => `<label class="f">${a(lb)}<input class="inp" id="pfD_${k}" type="text" inputmode="decimal" maxlength="7" value="${p && p.dims && p.dims[k] ? p.dims[k] : ''}" placeholder="${p ? esc((dimText(p.shape).match(/[\d.]+/g) || [])[{w:0, d:1, h:2}[k]] || '') : ''}"></label>`).join('')}</div>
       <p class="small" style="margin-top:4px">${a('p_dims_hint')}</p></div>
     <label class="f">${a('p_print')}<input class="inp" id="pfPrint" type="url" inputmode="url" maxlength="500" placeholder="https://makerworld.com/…" value="${esc(p ? C.printUrl[p.id] || '' : '')}"></label>
@@ -1503,7 +1523,7 @@ function productDialog(id){
       <label class="btn sm" style="margin-top:8px">${a('p_photo_add')}<input id="pfPhoto" type="file" accept="image/jpeg,image/png,image/webp" multiple data-on="photo" hidden></label>
       <p class="small" style="margin-top:6px">${a('p_photo_hint')}</p></div>
     <p id="pfErr" class="err"></p><button class="btn primary">${a('save')}</button></form>`, true);
-  dlgPhotos = photosOf(p).map(x => Object.assign({}, x)); dlgRemoved = []; renderPhotoMgr();
+  dlgPhotos = photosOf(p).map(x => Object.assign({}, x)); dlgRemoved = []; renderPhotoMgr(); renderCalc();
 }
 let dlgPhoto = '', dlgPhotos = [], dlgRemoved = [];
 function renderPhotoMgr(){
@@ -1562,6 +1582,34 @@ function colorDialog(id){
 }
 const homeCfg = () => (Array.isArray(settings().home) ? settings().home : []).map(r => Object.assign({}, r));
 const saveHome = list => save(() => q(sb.from('settings').upsert({id:1, data:Object.assign({}, C.settings, {home:list})})), () => { closeDlg(); renderAdmin(); });
+/* ---------- price calculator ---------- */
+const COST_DEF = {fil:7000, hour:150, fixed:150, markup:100, round:10};
+const costCfg = () => Object.assign({}, COST_DEF, C.cost || {});
+const numIn = id => { const el = $('#' + id); const v = el ? parseFloat(String(el.value).replace(',', '.')) : NaN; return isFinite(v) && v >= 0 ? v : 0; };
+function calcPrice(g, mins, markup){
+  const c = costCfg(), fil = g / 1000 * c.fil, time = mins / 60 * c.hour, fixed = c.fixed, cost = fil + time + fixed;
+  const r = Math.max(1, +c.round || 1), price = Math.ceil(cost * (1 + markup / 100) / r) * r;
+  return {fil, time, fixed, cost, price, profit:price - cost};
+}
+function renderCalc(){
+  const box = $('#pcOut'); if(!box) return;
+  const g = numIn('pcW'), mins = numIn('pcH') * 60 + numIn('pcM'), mk = numIn('pcMk'), cur = numIn('pfPrice');
+  $('#pcMkV').textContent = Math.round(mk) + ' %';
+  const put = h => { if(box._h !== h){ box._h = h; box.innerHTML = h; } };   // skip identical re-renders so a click is not lost on blur
+  if(!g && !mins){ put(`<p class="small">${a('pc_empty')}</p>`); return; }
+  const r = calcPrice(g, mins, mk), f = v => fmt(Math.round(v));
+  const curMk = cur && r.cost ? Math.round((cur / r.cost - 1) * 100) : null;
+  put(`<div class="kv pc-kv">
+      <div><span>${a('pc_fil')} (${String(g).replace('.', ',')} g)</span><span class="mono">${f(r.fil)}</span></div>
+      <div><span>${a('pc_time')} (${Math.floor(mins / 60)} ${a('pc_h')} ${Math.round(mins % 60)} ${a('pc_m')})</span><span class="mono">${f(r.time)}</span></div>
+      <div><span>${a('pc_fixed')}</span><span class="mono">${f(r.fixed)}</span></div>
+      <div><span><b>${a('pc_cost')}</b></span><span class="mono"><b>${f(r.cost)}</b></span></div>
+      <div class="pc-res"><span><b>${a('pc_price')}</b> (+${Math.round(mk)} %)</span><span class="mono"><b>${f(r.price)}</b></span></div>
+      <div><span>${a('pc_profit')}</span><span class="mono">${f(r.profit)}</span></div>
+    </div>
+    <div class="rowbtns" style="margin-top:8px"><button type="button" class="btn sm primary" data-act="pc-use" data-v="${r.price}">${a('pc_use')} ${f(r.price)}</button>
+      ${curMk !== null ? `<span class="small">${esc(a('pc_cur').replace('{p}', f(cur)).replace('{m}', curMk))}</span>` : ''}</div>`);
+}
 /* ---------- Telegram notifications (settings tab) ---------- */
 async function renderTg(){
   const box = $('#tgBox'); if(!box) return;
@@ -1699,6 +1747,7 @@ const ACT = {
     el.disabled = true; try { await q(sb.rpc('tg_test')); msg('tgMsg', a('tg_sent'), true); } catch(e){ msg('tgMsg', e.message || a('err')); }
     setTimeout(() => renderTg().then(() => msg('tgMsg', a('tg_sent'), true)), 2500);
   },
+  'pc-use':el => { $('#pfPrice').value = el.dataset.v; renderCalc(); },
   'pm-all':el => $$('#pForm .pm').forEach(x => x.checked = el.dataset.v === '1'),
   'pc-all':el => $$('#pForm .pc').forEach(x => x.checked = el.dataset.v === '1'),
   'lb-open':el => lbOpen(+el.dataset.i),
@@ -1775,6 +1824,7 @@ const INP = {
   mask:el => { el.value = mapPhone(el.value); },
   dl:el => { delivery = el.value; renderCart('cart'); },
   apf:el => { adm[el.dataset.k] = el.value; lsSet('pl_admp', JSON.stringify({pq:adm.pq, pcat:adm.pcat, pst:adm.pst, psort:adm.psort})); const cmap = {}; cats().forEach(c => cmap[c.id] = c); admProdRows(cmap); },
+  calc:() => renderCalc(),
   hcat:el => { $('#hPick').innerHTML = homePickHTML(el.value, []); },
   mqty:el => { if(M){ M.qty = Math.min(500, Math.max(1, parseInt(el.value, 10) || 1)); renderModalInfo(); } },
   ostatus:el => setOrderStatus(el.dataset.ref, el.value),
@@ -1786,7 +1836,7 @@ const INP = {
 ['input', 'change'].forEach(ev => document.addEventListener(ev, e => {
   const on = e.target.dataset && e.target.dataset.on; if(!on || !INP[on]) return;
   const isText = e.target.tagName === 'INPUT' && (e.target.type === 'tel' || e.target.type === 'text' || e.target.type === 'search');
-  if(ev === 'input' && !isText) return; if(ev === 'change' && isText && on === 'mask') return;
+  if(ev === 'input' && !isText && on !== 'calc') return; if(ev === 'change' && isText && on === 'mask') return;
   INP[on](e.target);
 }));
 const FORMS = {
@@ -1831,13 +1881,14 @@ const FORMS = {
     const dn = Object.keys(dv).length; if(dn && dn < 3) return msg('pfErr', a('p_dims_bad'));
     const purl = $('#pfPrint').value.trim(); if(purl && !/^https:\/\/[^\s]+$/i.test(purl)) return msg('pfErr', a('p_print_bad'));
     const old = id ? prod(id) : null, data = {mats:pm, colors:pc, shape:old ? old.shape : '', cat:$('#pfCat').value, price, name, desc, active:$('#pfActive').checked, photo:'', dims:dn ? dv : null};
-    const pid = id || 'p' + uid(), btn = $('#pForm .btn.primary');
+    const pid = id || 'p' + uid(), btn = $('#pForm > .btn.primary');
     if(btn){ btn.disabled = true; btn.textContent = a('p_uploading'); }
     save(async () => {
       try { data.photos = await syncPhotos(pid); }
       catch(err){ if(btn){ btn.disabled = false; btn.textContent = a('save'); } throw err; }
       await q(sb.from('products').upsert(MAP.products.to(Object.assign({id:pid, sort:old ? old.sort : products().length}, data))));
-      if(purl || C.printUrl[pid]) await q(sb.from('product_admin').upsert({pid, print_url:purl}));
+      const pcw = numIn('pcW'), pcm = Math.round(numIn('pcH') * 60 + numIn('pcM')), pmk = Math.round(numIn('pcMk'));
+      if(purl || pcw || pcm || C.pAdmin[pid]) await q(sb.from('product_admin').upsert({pid, print_url:purl, weight_g:pcw ? Math.round(pcw * 10) / 10 : null, print_min:pcm || null, markup:pmk}));
     }, () => { closeDlg(); renderAdmin(); });
   },
   mtForm:e => {
@@ -1858,6 +1909,11 @@ const FORMS = {
     const prev = old ? list.find(x => x.id === old) : null;
     const row = {id:old || 'c' + uid(), name, hex, sort:prev ? prev.sort : list.length};
     save(() => q(sb.from('colors').upsert(MAP.colors.to(row))), () => { closeDlg(); renderAdmin(); });
+  },
+  costForm:() => {
+    const n = id => Math.max(0, parseFloat($('#' + id).value) || 0);
+    const data = {fil:n('csFil'), hour:n('csHour'), fixed:n('csFixed'), markup:Math.min(1000, Math.round(n('csMk'))), round:+$('#csRound').value || 10};
+    save(() => q(sb.from('admin_settings').upsert({id:1, data})), () => { renderAdmin(); setTimeout(() => msg('csMsg', a('saved'), true), 50); });
   },
   tgForm:async () => {
     try { await q(sb.rpc('tg_save', {p_token:$('#tgToken').value.trim(), p_chat:$('#tgChat').value.trim(), p_enabled:$('#tgOn').checked})); }
