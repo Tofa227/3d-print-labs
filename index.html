@@ -159,6 +159,20 @@ section.sec{padding-block:72px 0}
 .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .admfilters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}.admfilters .f{min-width:150px}.admfilters #apQ{flex:1 1 200px;max-width:320px}
 .printbtn{margin-left:8px;padding:2px 10px;min-height:0;text-decoration:none;vertical-align:middle}
+.gal-strip img{cursor:zoom-in}.gal-zoom{position:absolute;right:10px;bottom:10px;width:34px;height:34px;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;display:grid;place-items:center;font-size:18px;pointer-events:none}
+.lb{position:fixed;inset:0;z-index:120;background:#000;color:#fff}
+.lb-strip{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}.lb-strip::-webkit-scrollbar{display:none}
+.lb-slide{flex:0 0 100%;height:100%;overflow:hidden;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;padding:calc(56px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));box-sizing:border-box}
+.lb-slide img{max-width:100%;max-height:100%;object-fit:contain;cursor:zoom-in;user-select:none;-webkit-user-drag:none}
+.lb.zoomed .lb-strip{overflow-x:hidden;scroll-snap-type:none}
+.lb.zoomed .lb-slide{overflow:auto;display:block;padding:0}
+.lb.zoomed .lb-slide img{max-width:none;max-height:none;width:auto;height:auto;min-width:200%;cursor:zoom-out;display:block}
+.lb-top{position:absolute;top:0;right:0;left:0;display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:calc(10px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) 10px max(12px,env(safe-area-inset-left,0px));pointer-events:none}
+.lb-top>*{pointer-events:auto}.lb-n{margin-right:auto;font-size:14px;opacity:.85}
+.lb-btn{width:42px;height:42px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(20,20,26,.7);color:#fff;font-size:18px;cursor:pointer;display:grid;place-items:center}
+.lb-prev,.lb-next{position:absolute;top:50%;transform:translateY(-50%)}.lb-prev{left:max(12px,env(safe-area-inset-left,0px))}.lb-next{right:max(12px,env(safe-area-inset-right,0px))}
+@media (max-width:760px){.lb-prev,.lb-next{display:none}}
+.lb.zoomed .lb-prev,.lb.zoomed .lb-next{display:none}
 .cathead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}.cathead h3{font-family:var(--font-display);font-size:clamp(20px,2.4vw,28px)}
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
 @media (max-width:1040px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -374,6 +388,11 @@ pre.sum{margin:0;white-space:pre-wrap;font-family:var(--font-mono);font-size:12p
 </footer>
 </div>
 
+<div class="lb" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="lb-strip" id="lbStrip"></div>
+  <div class="lb-top"><span class="lb-n mono" id="lbN"></span><button class="lb-btn" data-act="lb-zoom" id="lbZoom" aria-label="Zoom">＋</button><button class="lb-btn" data-act="lb-close" aria-label="Close">✕</button></div>
+  <button class="lb-btn lb-prev" data-act="lb-go" data-d="-1" aria-label="Previous">←</button><button class="lb-btn lb-next" data-act="lb-go" data-d="1" aria-label="Next">→</button>
+</div>
 <div class="ov" id="prodOv" hidden><div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="pName">
   <div class="mh"><span class="eyebrow" id="pCat"></span><button class="x" data-act="close-prod" aria-label="Close">×</button></div>
   <div class="pgrid"><div class="viewer" id="mView"></div><div class="pinfo" id="mInfo"></div></div>
@@ -529,7 +548,7 @@ hu:{
  hero_p:'Otthonra, asztalra, játékhoz és műhelybe. Válassz anyagot és színt, a darabot megrendelés után legyártjuk, és átvételre készen kapod.',
  hero_cta:'Katalógus',f_products:'Termékek',f_mats:'Anyagok',f_layer:'Rétegvastagság',f_recv:'Átvétel',f_recv_v:'Tab · Siófok · csomagpont · házhoz',
  play:'Lejátszás',pause:'Megállít',layer:'réteg',no_webgl:'A 3D előnézet ezen az eszközön nem érhető el.',details:'Részletek',
- c_title:'Katalógus',c_sub:'Kész modellek, amelyek közül választhatsz. Anyag és szín a termékoldalon is állítható.',c_search:'Keresés a katalógusban',c_all:'Mind',c_back:'← Vissza',c_more:'Mind megnézem',c_items:'{n} termék',c_prev:'Előző',c_next:'Következő',c_none:'Nincs találat.',c_add:'Kosárba',c_details:'Részletek',
+ c_title:'Katalógus',c_sub:'Kész modellek, amelyek közül választhatsz. Anyag és szín a termékoldalon is állítható.',c_search:'Keresés a katalógusban',c_all:'Mind',c_back:'← Vissza',zoom:'Nagyítás',c_more:'Mind megnézem',c_items:'{n} termék',c_prev:'Előző',c_next:'Következő',c_none:'Nincs találat.',c_add:'Kosárba',c_details:'Részletek',
  md_material:'Anyag',md_color:'Szín',md_qty:'Darab',md_size:'Méret',md_lead:'Elkészülés',md_layer:'Réteg',md_total:'Összesen',days:'munkanap',
  m_title:'Anyagok',m_sub:'A hőállóság hozzávetőleges, és függ a nyomtatási beállításoktól.',m_name:'Anyag',m_strength:'Szilárdság',m_heat:'Hőállóság',m_flex:'Rugalmasság',m_use:'Mire jó',m_extra:'Felár',
  mat_use:{PLA:'Dekor, játék, minden, ami nem melegszik.',PETG:'Tartók, mechanikus alkatrész, konyhai és kültéri használat.',ABS:'Hőt álló, strapabíró tárgyak.',ASA:'Kültér, UV-álló, napfénynek kitett részek.'},
@@ -562,7 +581,7 @@ en:{
  hero_p:'For the home, the desk, play and the workshop. Pick a material and colour; we print your piece after you order and have it ready for pick-up.',
  hero_cta:'Catalog',f_products:'Products',f_mats:'Materials',f_layer:'Layer height',f_recv:'Receive',f_recv_v:'Tab · Siófok · parcel point · home',
  play:'Play',pause:'Pause',layer:'layer',no_webgl:'3D preview is not available on this device.',details:'Details',
- c_title:'Catalog',c_sub:'Ready-made models to choose from. Material and colour can also be set on the product page.',c_search:'Search the catalog',c_all:'All',c_back:'← Back',c_more:'See all',c_items:'{n} items',c_prev:'Previous',c_next:'Next',c_none:'Nothing found.',c_add:'Add to cart',c_details:'Details',
+ c_title:'Catalog',c_sub:'Ready-made models to choose from. Material and colour can also be set on the product page.',c_search:'Search the catalog',c_all:'All',c_back:'← Back',zoom:'Enlarge',c_more:'See all',c_items:'{n} items',c_prev:'Previous',c_next:'Next',c_none:'Nothing found.',c_add:'Add to cart',c_details:'Details',
  md_material:'Material',md_color:'Colour',md_qty:'Quantity',md_size:'Size',md_lead:'Ready in',md_layer:'Layer',md_total:'Total',days:'working days',
  m_title:'Materials',m_sub:'Heat resistance is approximate and depends on print settings.',m_name:'Material',m_strength:'Strength',m_heat:'Heat',m_flex:'Flexibility',m_use:'Good for',m_extra:'Surcharge',
  mat_use:{PLA:'Decor, toys, anything that stays cool.',PETG:'Holders, mechanical parts, kitchen and outdoor use.',ABS:'Heat-tolerant, durable objects.',ASA:'Outdoor, UV-stable, parts exposed to sun.'},
@@ -595,7 +614,7 @@ ru:{
  hero_p:'Для дома, стола, игр и мастерской. Выбери материал и цвет: после заказа мы напечатаем изделие и подготовим к выдаче.',
  hero_cta:'Каталог',f_products:'Товаров',f_mats:'Материалы',f_layer:'Высота слоя',f_recv:'Получение',f_recv_v:'Таб · Шиофок · пункт выдачи · дом',
  play:'Играть',pause:'Стоп',layer:'слой',no_webgl:'3D-просмотр на этом устройстве недоступен.',details:'Подробнее',
- c_title:'Каталог',c_sub:'Готовые модели на выбор. Материал и цвет можно менять и на странице товара.',c_search:'Поиск по каталогу',c_all:'Все',c_back:'← Назад',c_more:'Смотреть все',c_items:'Товаров: {n}',c_prev:'Назад',c_next:'Вперёд',c_none:'Ничего не найдено.',c_add:'В корзину',c_details:'Подробнее',
+ c_title:'Каталог',c_sub:'Готовые модели на выбор. Материал и цвет можно менять и на странице товара.',c_search:'Поиск по каталогу',c_all:'Все',c_back:'← Назад',zoom:'Увеличить',c_more:'Смотреть все',c_items:'Товаров: {n}',c_prev:'Назад',c_next:'Вперёд',c_none:'Ничего не найдено.',c_add:'В корзину',c_details:'Подробнее',
  md_material:'Материал',md_color:'Цвет',md_qty:'Количество',md_size:'Размер',md_lead:'Готовность',md_layer:'Слой',md_total:'Итого',days:'раб. дн.',
  m_title:'Материалы',m_sub:'Термостойкость приблизительная и зависит от настроек печати.',m_name:'Материал',m_strength:'Прочность',m_heat:'Нагрев',m_flex:'Гибкость',m_use:'Для чего',m_extra:'Наценка',
  mat_use:{PLA:'Декор, игрушки, всё, что не греется.',PETG:'Держатели, механические детали, кухня и улица.',ABS:'Термостойкие прочные изделия.',ASA:'Улица, стойкость к UV, детали под солнцем.'},
@@ -1057,7 +1076,7 @@ function galShow(i){
   } else {
     if(MV){ MV.destroy(); MV = null; }
     if(!main.querySelector('.gal-strip')){
-      main.innerHTML = `<div class="gal-strip" id="galStrip">${ph.map((x, k) => `<img src="${esc(x.u)}" alt="${esc(L(p.name))} ${k + 1}" ${k ? 'loading="lazy"' : ''}>`).join('')}</div>`;
+      main.innerHTML = `<div class="gal-strip" id="galStrip">${ph.map((x, k) => `<img src="${esc(x.u)}" alt="${esc(L(p.name))} ${k + 1}" ${k ? 'loading="lazy"' : ''} data-act="lb-open" data-i="${k}" title="${esc(t('zoom'))}">`).join('')}</div><span class="gal-zoom" aria-hidden="true">⤢</span>`;
       const st = $('#galStrip'); st.addEventListener('scroll', () => { const k = Math.round(st.scrollLeft / Math.max(1, st.clientWidth)); galMark(k); }, {passive:true});
     }
     const st = $('#galStrip'); st.scrollTo({left:st.clientWidth * i, behavior:'auto'});
@@ -1065,7 +1084,29 @@ function galShow(i){
   galMark(i);
 }
 function galMark(i){ $$('#mView .gal-th').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.i === String(i)))); }
-function closeProduct(){ if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
+/* ---------- full-screen photo viewer ---------- */
+const LB = {i:0, n:0, zoom:false};
+function lbOpen(i){
+  const p = M && prod(M.id); if(!p) return; const ph = photosOf(p); if(!ph.length) return;
+  LB.n = ph.length; LB.zoom = false;
+  $('#lbStrip').innerHTML = ph.map((x, k) => `<div class="lb-slide"><img src="${esc(x.u)}" alt="${esc(L(p.name))} ${k + 1}" data-act="lb-dbl"></div>`).join('');
+  $('#lightbox').hidden = false; $('#lightbox').classList.remove('zoomed');
+  $('.lb-prev').hidden = $('.lb-next').hidden = LB.n < 2;
+  const st = $('#lbStrip');
+  st.onscroll = () => { if(!LB.zoom){ LB.i = Math.round(st.scrollLeft / Math.max(1, st.clientWidth)); lbLabel(); } };
+  requestAnimationFrame(() => { st.scrollLeft = st.clientWidth * i; LB.i = i; lbLabel(); });
+}
+function lbLabel(){ $('#lbN').textContent = LB.n > 1 ? `${LB.i + 1} / ${LB.n}` : ''; $('#lbZoom').textContent = LB.zoom ? '－' : '＋'; }
+function lbGo(d){ if(LB.zoom) lbZoom(false); const st = $('#lbStrip'), j = Math.max(0, Math.min(LB.n - 1, LB.i + d)); st.scrollTo({left:st.clientWidth * j, behavior:'smooth'}); LB.i = j; lbLabel(); }
+function lbZoom(on, x, y){
+  LB.zoom = on == null ? !LB.zoom : on; $('#lightbox').classList.toggle('zoomed', LB.zoom); lbLabel();
+  const sl = $$('#lbStrip .lb-slide')[LB.i]; if(!sl) return;
+  if(LB.zoom){ const st = $('#lbStrip'); st.scrollLeft = st.clientWidth * LB.i;
+    requestAnimationFrame(() => { const fx = x == null ? 0.5 : x, fy = y == null ? 0.5 : y; sl.scrollLeft = (sl.scrollWidth - sl.clientWidth) * fx; sl.scrollTop = (sl.scrollHeight - sl.clientHeight) * fy; }); }
+  else { sl.scrollLeft = 0; sl.scrollTop = 0; }
+}
+function lbClose(){ $('#lightbox').hidden = true; $('#lbStrip').innerHTML = ''; LB.zoom = false; }
+function closeProduct(){ lbClose(); if(MV){ MV.destroy(); MV = null; } M = null; $('#prodOv').hidden = true; }
 function renderModalInfo(){
   if(!M) return;
   const p = prod(M.id); if(!p){ closeProduct(); return; }
@@ -1636,6 +1677,11 @@ const ACT = {
     save(async () => { await q(sb.from('products').delete().eq('id', el.dataset.id)); if(keys.length) await sb.storage.from('products').remove(keys); }); },
   'pm-all':el => $$('#pForm .pm').forEach(x => x.checked = el.dataset.v === '1'),
   'pc-all':el => $$('#pForm .pc').forEach(x => x.checked = el.dataset.v === '1'),
+  'lb-open':el => lbOpen(+el.dataset.i),
+  'lb-close':() => lbClose(),
+  'lb-go':el => lbGo(+el.dataset.d),
+  'lb-zoom':() => lbZoom(),
+  'lb-dbl':(el, e) => { if(LB.zoom) return lbZoom(false); const r = el.getBoundingClientRect(); lbZoom(true, e ? (e.clientX - r.left) / r.width : 0.5, e ? (e.clientY - r.top) / r.height : 0.5); },
   'gal':el => galShow(el.dataset.i === '3d' ? '3d' : +el.dataset.i),
   'ph-move':el => { const i = +el.dataset.i, j = i + (+el.dataset.d); if(j < 0 || j >= dlgPhotos.length) return; [dlgPhotos[i], dlgPhotos[j]] = [dlgPhotos[j], dlgPhotos[i]]; renderPhotoMgr(); },
   'ph-rm':el => { const x = dlgPhotos.splice(+el.dataset.i, 1)[0]; if(x && x.k) dlgRemoved.push(x.k); if(x && x.preview) URL.revokeObjectURL(x.preview); renderPhotoMgr(); },
@@ -1696,7 +1742,10 @@ document.addEventListener('click', e => {
   if(e.target === $('#prodOv')) closeProduct();
   if(e.target === $('#dlgOv')) closeDlg();
 });
-document.addEventListener('keydown', e => { if(e.key === 'Escape'){ if(!$('#dlgOv').hidden) closeDlg(); else if(!$('#cartOv').hidden) closeCart(); else closeProduct(); } });
+document.addEventListener('keydown', e => {
+  if(!$('#lightbox').hidden){ if(e.key === 'Escape') lbClose(); else if(e.key === 'ArrowLeft') lbGo(-1); else if(e.key === 'ArrowRight') lbGo(1); return; }
+  if(e.key === 'Escape'){ if(!$('#dlgOv').hidden) closeDlg(); else if(!$('#cartOv').hidden) closeCart(); else closeProduct(); } });
+$('#lightbox').addEventListener('click', e => { if(e.target.classList.contains('lb-slide') && !LB.zoom) lbClose(); });
 const INP = {
   cc:el => { const p = el.dataset.p; $('#' + p + 'Num').placeholder = el.value === 'hu' ? '20 123 4567' : '50 123 4567'; $('#' + p + 'Num').value = ''; },
   mask:el => { el.value = mapPhone(el.value); },
@@ -1851,7 +1900,7 @@ function applyTheme(th){
   requestAnimationFrame(() => VIEWERS.forEach(v => v.refreshTheme()));
 }
 $('#q').addEventListener('input', e => { query = e.target.value; renderCatalog(); });
-new MutationObserver(() => document.documentElement.classList.toggle('lock', ['#prodOv', '#cartOv', '#dlgOv'].some(id => !$(id).hidden)))
+new MutationObserver(() => document.documentElement.classList.toggle('lock', ['#prodOv', '#cartOv', '#dlgOv', '#lightbox'].some(id => !$(id).hidden)))
   .observe(document.body, {subtree:true, attributes:true, attributeFilter:['hidden']});
 $('#themeBtn').addEventListener('click', () => {
   const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
